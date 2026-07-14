@@ -34,8 +34,6 @@ mkdir -p ~/.claude/skills/yuque-publishing
 cp -a skills/yuque-publishing/. ~/.claude/skills/yuque-publishing/
 ```
 
-![Yuque Publishing terminal demo](assets/demo.svg)
-
 2. Restart Codex or Claude Code.
 
 3. In chat, ask the agent to use the skill. For Claude Code, you can invoke it directly:

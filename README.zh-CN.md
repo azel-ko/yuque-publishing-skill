@@ -34,8 +34,6 @@ mkdir -p ~/.claude/skills/yuque-publishing
 cp -a skills/yuque-publishing/. ~/.claude/skills/yuque-publishing/
 ```
 
-![Yuque Publishing terminal demo](assets/demo.svg)
-
 2. 重启 Codex 或 Claude Code。
 
 3. 在聊天里让 agent 使用这个 skill。Claude Code 可以直接调用：
