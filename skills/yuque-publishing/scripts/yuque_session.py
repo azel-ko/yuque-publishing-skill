@@ -12,6 +12,7 @@ import json
 import os
 import re
 import sys
+import time
 from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
@@ -99,6 +100,30 @@ def launch_context(playwright: Any, path: Path, *, headless: bool = True) -> Any
     )
 
 
+def wait_for_enter_or_hold(prompt: str, keep_open_seconds: int) -> None:
+    if sys.stdin.isatty():
+        input(prompt)
+        return
+
+    print(prompt)
+    if keep_open_seconds <= 0:
+        print("stdin is not interactive; keeping the browser open until this command is stopped.")
+        try:
+            while True:
+                time.sleep(3600)
+        except KeyboardInterrupt:
+            return
+
+    print(
+        "stdin is not interactive; keeping the browser open for "
+        f"{keep_open_seconds} seconds. Stop the command after login if needed."
+    )
+    try:
+        time.sleep(keep_open_seconds)
+    except KeyboardInterrupt:
+        return
+
+
 def require_risk_ack(args: argparse.Namespace) -> None:
     if not args.i_understand_session_risk:
         raise YuqueSessionError(
@@ -170,7 +195,10 @@ def command_login(args: argparse.Namespace) -> int:
         context = launch_context(p, path, headless=False)
         page = context.pages[0] if context.pages else context.new_page()
         page.goto(args.space_url, wait_until="domcontentloaded", timeout=args.timeout_ms)
-        input("After login succeeds in the browser, press Enter here to close it...")
+        wait_for_enter_or_hold(
+            "After login succeeds in the browser, press Enter here to close it...",
+            args.keep_open_seconds,
+        )
         context.close()
     return 0
 
@@ -289,6 +317,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     login = subparsers.add_parser("login", help="open Yuque login in the isolated profile")
     login.add_argument("--space-url", default=DEFAULT_SPACE_URL)
+    login.add_argument(
+        "--keep-open-seconds",
+        type=int,
+        default=1800,
+        help="when stdin is not interactive, keep the browser open for this many seconds; use 0 to wait forever",
+    )
     login.set_defaults(func=command_login)
 
     preflight = subparsers.add_parser("preflight", help="inspect isolated profile login state")

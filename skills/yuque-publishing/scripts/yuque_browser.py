@@ -12,6 +12,7 @@ import argparse
 import json
 import os
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -91,6 +92,38 @@ def launch_context(playwright: Any, path: Path, *, headless: bool = False) -> An
     return context
 
 
+def wait_for_enter_or_hold(prompt: str, keep_open_seconds: int) -> None:
+    if sys.stdin.isatty():
+        input(prompt)
+        return
+
+    print(prompt)
+    if keep_open_seconds <= 0:
+        print("stdin is not interactive; keeping the browser open until this command is stopped.")
+        try:
+            while True:
+                time.sleep(3600)
+        except KeyboardInterrupt:
+            return
+
+    print(
+        "stdin is not interactive; keeping the browser open for "
+        f"{keep_open_seconds} seconds. Stop the command after login if needed."
+    )
+    try:
+        time.sleep(keep_open_seconds)
+    except KeyboardInterrupt:
+        return
+
+
+def require_interactive_stdin(command: str) -> None:
+    if not sys.stdin.isatty():
+        raise YuqueBrowserError(
+            f"{command} requires an interactive terminal because it waits for manual browser steps. "
+            "Run it from a terminal/TTY, or use cookie/session mode for programmatic creation."
+        )
+
+
 def command_login(args: argparse.Namespace) -> int:
     sync_playwright, _ = ensure_playwright()
     path = profile_dir(args.profile_dir)
@@ -103,7 +136,10 @@ def command_login(args: argparse.Namespace) -> int:
         context = launch_context(p, path, headless=False)
         page = context.pages[0] if context.pages else context.new_page()
         page.goto(login_url, wait_until="domcontentloaded", timeout=args.timeout_ms)
-        input("After Yuque login finishes in the browser, press Enter here to close it...")
+        wait_for_enter_or_hold(
+            "After Yuque login finishes in the browser, press Enter here to close it...",
+            args.keep_open_seconds,
+        )
         context.close()
     print("Login profile saved locally. No cookies were exported.")
     return 0
@@ -165,6 +201,7 @@ def command_create_doc(args: argparse.Namespace) -> int:
     if not args.execute:
         print_json(plan)
         return 0
+    require_interactive_stdin("browser-session create-doc")
     if not path.exists():
         raise YuqueBrowserError(f"profile does not exist: {path}. Run login first.")
 
@@ -209,6 +246,12 @@ def build_parser() -> argparse.ArgumentParser:
     login = subparsers.add_parser("login", help="open Yuque login in an isolated browser profile")
     login.add_argument("--space-url", default=DEFAULT_SPACE_URL)
     login.add_argument("--goto", help="login redirect target")
+    login.add_argument(
+        "--keep-open-seconds",
+        type=int,
+        default=1800,
+        help="when stdin is not interactive, keep the browser open for this many seconds; use 0 to wait forever",
+    )
     login.set_defaults(func=command_login)
 
     status = subparsers.add_parser("status", help="open the profile and check a Yuque URL")

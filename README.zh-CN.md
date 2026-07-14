@@ -119,6 +119,14 @@ python3 -m playwright install chromium
 export YUQUE_BROWSER_EXECUTABLE="/usr/bin/google-chrome"
 ```
 
+如果 Google Chrome 窗口打开后马上消失，通常是因为命令运行在非交互 stdin 环境里。现在登录 helper 在这种情况下默认会让浏览器保持打开 30 分钟。也可以用 `--keep-open-seconds 0` 一直保持打开，直到你停止命令：
+
+```bash
+python3 ~/.codex/skills/yuque-publishing/scripts/yuque_browser.py login \
+  --space-url https://www.yuque.com/azel/zob9yu \
+  --keep-open-seconds 0
+```
+
 ## Open API Token 使用示例
 
 先做认证和目标知识库检查：

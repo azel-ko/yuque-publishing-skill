@@ -119,6 +119,14 @@ If system Chrome is already installed, the helpers will try it before Playwright
 export YUQUE_BROWSER_EXECUTABLE="/usr/bin/google-chrome"
 ```
 
+If the Google Chrome window opens and immediately closes, the command is probably running without an interactive stdin. In that case the login helper now keeps the browser open for 30 minutes by default. Use `--keep-open-seconds 0` to keep it open until the command is stopped:
+
+```bash
+python3 ~/.codex/skills/yuque-publishing/scripts/yuque_browser.py login \
+  --space-url https://www.yuque.com/azel/zob9yu \
+  --keep-open-seconds 0
+```
+
 ## Open API Token Usage
 
 Run a preflight check:

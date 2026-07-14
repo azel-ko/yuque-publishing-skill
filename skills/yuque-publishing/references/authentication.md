@@ -100,6 +100,8 @@ If system Chrome is installed, the helpers try it before Playwright's bundled Ch
 export YUQUE_BROWSER_EXECUTABLE="/usr/bin/google-chrome"
 ```
 
+If the Chrome window opens and immediately closes, the helper is probably running without an interactive stdin. Login commands keep the browser open for 30 minutes by default in non-interactive runs; pass `--keep-open-seconds 0` to keep it open until the command is stopped. Guided `browser-session create-doc --execute` still requires an interactive terminal because it waits for manual editor focus steps.
+
 If Yuque verification fails in the new isolated profile, ask the user to try another official login path in the same browser window, such as WeChat or DingTalk app QR-code login. The session remains scoped to the dedicated profile, and the skill should still avoid reading passwords, cookies, or session values unless the user explicitly chooses cookie/session mode.
 
 Choose a mode first:
