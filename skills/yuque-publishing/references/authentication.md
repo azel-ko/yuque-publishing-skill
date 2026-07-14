@@ -100,6 +100,8 @@ If system Chrome is installed, the helpers try it before Playwright's bundled Ch
 export YUQUE_BROWSER_EXECUTABLE="/usr/bin/google-chrome"
 ```
 
+If Yuque verification fails in the new isolated profile, ask the user to try another official login path in the same browser window, such as WeChat or DingTalk app QR-code login. The session remains scoped to the dedicated profile, and the skill should still avoid reading passwords, cookies, or session values unless the user explicitly chooses cookie/session mode.
+
 Choose a mode first:
 
 ```bash

@@ -176,6 +176,8 @@ python3 ~/.codex/skills/yuque-publishing/scripts/yuque_browser.py login \
   --space-url https://www.yuque.com/azel/zob9yu
 ```
 
+If Yuque verification fails in the new profile, switch to another official login path in the same browser window, such as WeChat or DingTalk app QR-code login. The session still stays inside the dedicated profile, and the skill does not need to read passwords, cookies, or session values.
+
 Dry-run a guided UI publish:
 
 ```bash

@@ -176,6 +176,8 @@ python3 ~/.codex/skills/yuque-publishing/scripts/yuque_browser.py login \
   --space-url https://www.yuque.com/azel/zob9yu
 ```
 
+如果新 profile 中语雀验证失败，可以在同一个浏览器窗口里切换为微信、钉钉等官方 App 扫码登录。登录态仍保存在专用 profile 中，skill 不需要读取账号密码、cookie 或 session 值。
+
 dry-run，不会写入：
 
 ```bash
