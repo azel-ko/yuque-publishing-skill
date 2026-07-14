@@ -8,6 +8,7 @@
 
 - 将草稿、笔记、技术文章整理成结构化语雀文档。
 - 使用语雀开放 API，通过 `X-Auth-Token` 认证。
+- 给不能生成 API Token 的用户提供浏览器会话和显式 Cookie/session fallback。
 - 不在仓库或 skill 文件中保存真实凭证。
 - 写入操作默认 dry-run。
 - 只有显式传入 `--execute` 时才会创建或更新语雀文档。
@@ -43,10 +44,14 @@ cp -a skills/yuque-publishing ~/.codex/skills/yuque-publishing
 | 模式 | 适合谁 | 权限范围 | 说明 |
 |---|---|---:|---|
 | 官方 OAuth / 应用授权 或 Open API Token | 能使用语雀官方开发者认证的用户，通常是付费或超级会员账号 | 如果语雀支持 scope，则可控 | 首选，最稳定。当前 helper 脚本实现的是 `X-Auth-Token` 的 Open API Token 路径。 |
-| 浏览器会话自动化 | 不能生成 API Token、但可以正常网页登录的非超级会员用户 | 等同当前网页登录态 | 比抓 cookie 更安全的 fallback。应使用隔离浏览器 profile，通过 UI 自动化操作语雀，不导出 cookie。 |
-| Cookie/session 提取 | 明确接受风险的非超级会员用户 | 最大，通常等同完整账号登录权限 | 最高风险。Cookie 通常就是完整登录凭证。只能作为显式选择的高级 fallback，不能打印、提交或分享 session 值。 |
+| 浏览器会话自动化 | 不能生成 API Token、但可以正常网页登录的非超级会员用户 | 等同当前网页登录态 | 比抓 cookie 更安全的 fallback。使用隔离浏览器 profile，通过 UI 自动化操作语雀，不导出 cookie。 |
+| Cookie/session 提取 | 明确接受风险的非超级会员用户 | 最大，通常等同完整账号登录权限 | 最高风险。Cookie 通常就是完整登录凭证。只使用 skill 的隔离 profile，真实写入必须传 `--i-understand-session-risk`。 |
 
-当前仓库先把三种模式说明清楚；随仓库提供的 helper 脚本目前只实现 Open API Token 模式。浏览器相关模式应作为独立命令添加，让用户明确选择后才启用。
+仓库按模式提供了独立脚本：
+
+- `yuque_publish.py`：Open API Token 模式。
+- `yuque_browser.py`：浏览器会话 UI 模式，不导出 cookie。
+- `yuque_session.py`：Cookie/session 高级 fallback。
 
 ## 获取语雀 Token 或官方授权
 
@@ -83,7 +88,16 @@ export YUQUE_BASE_URL="https://www.yuque.com/api/v2"
 export YUQUE_USER_AGENT="codex-yuque-publishing-skill/0.1"
 ```
 
-## 使用示例
+## 浏览器依赖
+
+浏览器相关模式需要 Playwright：
+
+```bash
+python3 -m pip install playwright
+python3 -m playwright install chromium
+```
+
+## Open API Token 使用示例
 
 先做认证和目标知识库检查：
 
@@ -116,7 +130,7 @@ python3 ~/.codex/skills/yuque-publishing/scripts/yuque_publish.py \
   --execute
 ```
 
-更新已有文档：
+通过 Open API Token 模式更新已有文档：
 
 ```bash
 python3 ~/.codex/skills/yuque-publishing/scripts/yuque_publish.py \
@@ -127,6 +141,80 @@ python3 ~/.codex/skills/yuque-publishing/scripts/yuque_publish.py \
   --file article.md \
   --execute
 ```
+
+## 浏览器会话使用示例
+
+当你不能创建语雀 API Token、但可以正常网页登录时，优先使用这个模式。
+
+用隔离 profile 登录：
+
+```bash
+python3 ~/.codex/skills/yuque-publishing/scripts/yuque_browser.py login \
+  --space-url https://www.yuque.com/azel/zob9yu
+```
+
+dry-run，不会写入：
+
+```bash
+python3 ~/.codex/skills/yuque-publishing/scripts/yuque_browser.py create-doc \
+  --space-url https://www.yuque.com/azel/zob9yu \
+  --title "文章标题" \
+  --file article.md
+```
+
+执行引导式 UI 发布：
+
+```bash
+python3 ~/.codex/skills/yuque-publishing/scripts/yuque_browser.py create-doc \
+  --space-url https://www.yuque.com/azel/zob9yu \
+  --title "文章标题" \
+  --file article.md \
+  --execute
+```
+
+脚本会打开语雀，让你创建或打开空白编辑器，然后填入标题和正文。最终仍由你在浏览器里检查并保存/发布。
+
+## Cookie/session 使用示例
+
+只有在浏览器会话自动化不够用、并且你明确接受 session 具有完整账号权限时才使用。
+
+用同一个隔离 profile 登录：
+
+```bash
+python3 ~/.codex/skills/yuque-publishing/scripts/yuque_session.py login \
+  --space-url https://www.yuque.com/azel/zob9yu
+```
+
+检查登录状态，不打印 cookie：
+
+```bash
+python3 ~/.codex/skills/yuque-publishing/scripts/yuque_session.py preflight \
+  --space-url https://www.yuque.com/azel/zob9yu
+```
+
+dry-run web-session 创建请求：
+
+```bash
+python3 ~/.codex/skills/yuque-publishing/scripts/yuque_session.py create-doc \
+  --space-url https://www.yuque.com/azel/zob9yu \
+  --title "文章标题" \
+  --slug article-title \
+  --file article.md
+```
+
+真实执行必须显式确认风险：
+
+```bash
+python3 ~/.codex/skills/yuque-publishing/scripts/yuque_session.py create-doc \
+  --space-url https://www.yuque.com/azel/zob9yu \
+  --title "文章标题" \
+  --slug article-title \
+  --file article.md \
+  --execute \
+  --i-understand-session-risk
+```
+
+默认 session endpoint 是 `/api/docs`。这是语雀网页端接口，可能随前端变化；必要时用 `--endpoint` 和 `--book-id` 覆盖。
 
 ## 默认发布目标
 
@@ -148,3 +236,4 @@ skill 内置了 Azel 的默认语雀发布偏好：
 - CI 中应使用受保护的 Secret 注入 `YUQUE_TOKEN`。
 - Cookie/session 模式权限最大，不能作为默认模式。
 - 浏览器会话自动化应使用隔离浏览器 profile；除非用户明确接受风险，否则不要导出 cookie。
+- 默认隔离浏览器 profile 是 `~/.local/share/yuque-publishing/browser-profile`。

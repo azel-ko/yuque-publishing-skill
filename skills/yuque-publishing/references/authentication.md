@@ -76,3 +76,37 @@ Browser-based auth has two variants:
 
 - Browser session automation: open a browser profile, let the user log in, and operate Yuque's UI without exporting raw cookies. Prefer this for non-Super Member accounts.
 - Cookie/session extraction: use only when the user explicitly chooses it and understands that the extracted session usually has maximum account permissions. Do not add automated cookie extraction to default workflows.
+
+## Helper commands
+
+Browser-session mode uses Playwright and stores login state in:
+
+```text
+~/.local/share/yuque-publishing/browser-profile
+```
+
+Install Playwright before using browser-based modes:
+
+```bash
+python3 -m pip install playwright
+python3 -m playwright install chromium
+```
+
+Browser-session flow:
+
+```bash
+python3 scripts/yuque_browser.py login --space-url https://www.yuque.com/azel/zob9yu
+python3 scripts/yuque_browser.py create-doc --space-url https://www.yuque.com/azel/zob9yu --title "Title" --file article.md
+python3 scripts/yuque_browser.py create-doc --space-url https://www.yuque.com/azel/zob9yu --title "Title" --file article.md --execute
+```
+
+Cookie/session flow:
+
+```bash
+python3 scripts/yuque_session.py login --space-url https://www.yuque.com/azel/zob9yu
+python3 scripts/yuque_session.py preflight --space-url https://www.yuque.com/azel/zob9yu
+python3 scripts/yuque_session.py create-doc --space-url https://www.yuque.com/azel/zob9yu --title "Title" --file article.md
+python3 scripts/yuque_session.py create-doc --space-url https://www.yuque.com/azel/zob9yu --title "Title" --file article.md --execute --i-understand-session-risk
+```
+
+The cookie/session helper defaults to `/api/docs`, a Yuque web endpoint that may change. If Yuque changes it, pass `--endpoint` and `--book-id` explicitly after validating the current web request shape.

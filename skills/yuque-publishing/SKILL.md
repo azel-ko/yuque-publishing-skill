@@ -24,7 +24,7 @@ Prepare and publish structured documents to Yuque while keeping credentials out 
    - `项目案例`
    - `文章草稿`
 4. Read `references/authentication.md` before using credentials. Ask the user to choose official OAuth/app authorization or Open API token, browser session automation, or cookie/session extraction. Default to official auth/token when available.
-5. Run a dry-run with `scripts/yuque_publish.py` and inspect the payload.
+5. Run the relevant helper in dry-run mode and inspect the payload or browser plan.
 6. Confirm the final target and operation before a non-dry-run create/update.
 7. Verify the returned Yuque URL or fetch the page after publishing.
 
@@ -65,6 +65,21 @@ python3 scripts/yuque_publish.py preflight --namespace azel/zob9yu
 Do not ask the user to paste a token into chat. If a token has already appeared in chat, tell the user to rotate it before use.
 
 For non-Super Member accounts that cannot create tokens, offer browser session automation first. Offer cookie/session extraction only after explicitly stating that it has the broadest permissions and should be treated like a password.
+
+Browser-session helper:
+
+```bash
+python3 scripts/yuque_browser.py login --space-url https://www.yuque.com/azel/zob9yu
+python3 scripts/yuque_browser.py create-doc --space-url https://www.yuque.com/azel/zob9yu --title "Article Title" --file article.md
+```
+
+Cookie/session helper:
+
+```bash
+python3 scripts/yuque_session.py login --space-url https://www.yuque.com/azel/zob9yu
+python3 scripts/yuque_session.py create-doc --space-url https://www.yuque.com/azel/zob9yu --title "Article Title" --file article.md
+python3 scripts/yuque_session.py create-doc --space-url https://www.yuque.com/azel/zob9yu --title "Article Title" --file article.md --execute --i-understand-session-risk
+```
 
 ### 4. Dry-run first
 
@@ -117,7 +132,9 @@ Never include token values, cookies, or full raw HTTP headers in the final answe
 
 ## Resources
 
-- `references/authentication.md`: credential handling, token source, redaction, and CI guidance.
+- `references/authentication.md`: credential handling, auth mode selection, token/session boundaries, redaction, and CI guidance.
 - `references/api-contract.md`: Yuque Open API assumptions, endpoints, and update caveats.
 - `references/publishing-policy.md`: default destination, directory mapping, and publication safety rules.
 - `scripts/yuque_publish.py`: standard-library helper for preflight, dry-run payload rendering, create, and update.
+- `scripts/yuque_browser.py`: Playwright browser-session helper that does not export cookies.
+- `scripts/yuque_session.py`: explicit cookie/session fallback using the isolated skill profile.

@@ -8,6 +8,7 @@ Codex skill for preparing, dry-running, publishing, and updating Yuque articles 
 
 - Turns drafts, notes, and technical articles into structured Yuque pages.
 - Uses Yuque Open API with `X-Auth-Token` authentication.
+- Supports browser-session and explicit cookie/session fallback modes for users who cannot create API tokens.
 - Keeps credentials out of the repository and out of skill files.
 - Runs write operations as dry-runs by default.
 - Requires explicit `--execute` before creating or updating Yuque documents.
@@ -43,10 +44,14 @@ Choose one authentication mode before publishing:
 | Mode | Who should use it | Permission level | Notes |
 |---|---|---:|---|
 | Official OAuth / app authorization or Open API token | Users who can use Yuque's official developer auth, often paid or Super Member accounts | Scoped when Yuque supports scopes | Preferred and most stable. The included helper currently implements the Open API token path with `X-Auth-Token`. |
-| Browser session automation | Non-Super Member users who can log in in a browser but cannot create an API token | Same as the logged-in browser session | Safer fallback than extracting cookies. The automation should use an isolated browser profile and operate the Yuque UI without exporting cookies. |
-| Cookie/session extraction | Non-Super Member users who explicitly accept the risk | Maximum account-level permission | Highest risk. Cookies usually act like full login credentials. Use only as an explicit advanced fallback; never print, commit, or share session values. |
+| Browser session automation | Non-Super Member users who can log in in a browser but cannot create an API token | Same as the logged-in browser session | Safer fallback than extracting cookies. Uses an isolated browser profile and operates the Yuque UI without exporting cookies. |
+| Cookie/session extraction | Non-Super Member users who explicitly accept the risk | Maximum account-level permission | Highest risk. Cookies usually act like full login credentials. Uses only the isolated skill profile and requires `--i-understand-session-risk` for live writes. |
 
-This repository currently documents all three choices, but the shipped helper script implements only the Open API token mode. Browser-based modes should be added as separate explicit commands so users can opt in intentionally.
+The repository ships separate helpers for each path:
+
+- `yuque_publish.py`: Open API token mode.
+- `yuque_browser.py`: browser-session UI mode; does not export cookies.
+- `yuque_session.py`: cookie/session mode; explicit advanced fallback.
 
 ## Get a Yuque Token or Official Auth
 
@@ -83,7 +88,16 @@ export YUQUE_BASE_URL="https://www.yuque.com/api/v2"
 export YUQUE_USER_AGENT="codex-yuque-publishing-skill/0.1"
 ```
 
-## Usage
+## Browser Dependencies
+
+Browser-based modes require Playwright:
+
+```bash
+python3 -m pip install playwright
+python3 -m playwright install chromium
+```
+
+## Open API Token Usage
 
 Run a preflight check:
 
@@ -116,7 +130,7 @@ python3 ~/.codex/skills/yuque-publishing/scripts/yuque_publish.py \
   --execute
 ```
 
-Update an existing document:
+Update an existing document through the Open API token mode:
 
 ```bash
 python3 ~/.codex/skills/yuque-publishing/scripts/yuque_publish.py \
@@ -127,6 +141,80 @@ python3 ~/.codex/skills/yuque-publishing/scripts/yuque_publish.py \
   --file article.md \
   --execute
 ```
+
+## Browser Session Usage
+
+Use this mode when you cannot create a Yuque API token but can log in in a browser.
+
+Log in with an isolated profile:
+
+```bash
+python3 ~/.codex/skills/yuque-publishing/scripts/yuque_browser.py login \
+  --space-url https://www.yuque.com/azel/zob9yu
+```
+
+Dry-run a guided UI publish:
+
+```bash
+python3 ~/.codex/skills/yuque-publishing/scripts/yuque_browser.py create-doc \
+  --space-url https://www.yuque.com/azel/zob9yu \
+  --title "Article Title" \
+  --file article.md
+```
+
+Run the guided UI flow:
+
+```bash
+python3 ~/.codex/skills/yuque-publishing/scripts/yuque_browser.py create-doc \
+  --space-url https://www.yuque.com/azel/zob9yu \
+  --title "Article Title" \
+  --file article.md \
+  --execute
+```
+
+The script opens Yuque, asks you to create/open a blank editor, then fills the title and body. You still review and save/publish in the browser.
+
+## Cookie/Session Usage
+
+Use this only when browser-session automation is not enough and you explicitly accept that session credentials usually have full account permissions.
+
+Log in with the same isolated profile:
+
+```bash
+python3 ~/.codex/skills/yuque-publishing/scripts/yuque_session.py login \
+  --space-url https://www.yuque.com/azel/zob9yu
+```
+
+Inspect login state without printing cookies:
+
+```bash
+python3 ~/.codex/skills/yuque-publishing/scripts/yuque_session.py preflight \
+  --space-url https://www.yuque.com/azel/zob9yu
+```
+
+Dry-run the web-session create request:
+
+```bash
+python3 ~/.codex/skills/yuque-publishing/scripts/yuque_session.py create-doc \
+  --space-url https://www.yuque.com/azel/zob9yu \
+  --title "Article Title" \
+  --slug article-title \
+  --file article.md
+```
+
+Execute only with explicit risk acknowledgement:
+
+```bash
+python3 ~/.codex/skills/yuque-publishing/scripts/yuque_session.py create-doc \
+  --space-url https://www.yuque.com/azel/zob9yu \
+  --title "Article Title" \
+  --slug article-title \
+  --file article.md \
+  --execute \
+  --i-understand-session-risk
+```
+
+The default session endpoint is `/api/docs`. It is a Yuque web endpoint and may change; use `--endpoint` and `--book-id` if needed.
 
 ## Default Destination
 
@@ -148,3 +236,4 @@ Directory mapping is documented in `skills/yuque-publishing/references/publishin
 - CI should inject `YUQUE_TOKEN` as a protected secret.
 - Cookie/session mode has the broadest permissions and should never be the default.
 - Browser session automation should use an isolated browser profile and should not export cookies unless the user explicitly asks for that risk.
+- The default isolated browser profile is `~/.local/share/yuque-publishing/browser-profile`.

@@ -7,3 +7,6 @@ __pycache__/
 .DS_Store
 tmp/
 dist/
+.auth/
+storage-state*.json
+browser-profile/
