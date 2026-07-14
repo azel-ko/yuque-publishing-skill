@@ -49,9 +49,25 @@ cp -a skills/yuque-publishing ~/.codex/skills/yuque-publishing
 
 仓库按模式提供了独立脚本：
 
+- `yuque_auth.py`：选择认证模式，并打印对应的下一步命令。
 - `yuque_publish.py`：Open API Token 模式。
 - `yuque_browser.py`：浏览器会话 UI 模式，不导出 cookie。
 - `yuque_session.py`：Cookie/session 高级 fallback。
+
+发布前先运行选择器：
+
+```bash
+python3 ~/.codex/skills/yuque-publishing/scripts/yuque_auth.py select
+```
+
+非交互示例：
+
+```bash
+python3 ~/.codex/skills/yuque-publishing/scripts/yuque_auth.py select \
+  --mode browser \
+  --title "文章标题" \
+  --file article.md
+```
 
 ## 获取语雀 Token 或官方授权
 
@@ -95,6 +111,12 @@ export YUQUE_USER_AGENT="codex-yuque-publishing-skill/0.1"
 ```bash
 python3 -m pip install playwright
 python3 -m playwright install chromium
+```
+
+如果系统已经安装 Chrome，helper 会优先尝试系统 Chrome，不一定必须下载 Playwright 自带 Chromium。也可以显式设置：
+
+```bash
+export YUQUE_BROWSER_EXECUTABLE="/usr/bin/google-chrome"
 ```
 
 ## Open API Token 使用示例
@@ -145,6 +167,7 @@ python3 ~/.codex/skills/yuque-publishing/scripts/yuque_publish.py \
 ## 浏览器会话使用示例
 
 当你不能创建语雀 API Token、但可以正常网页登录时，优先使用这个模式。
+它拥有当前登录语雀账号的完整权限。专用 profile 只限制本机暴露范围，不降低语雀侧权限。
 
 用隔离 profile 登录：
 
@@ -177,6 +200,7 @@ python3 ~/.codex/skills/yuque-publishing/scripts/yuque_browser.py create-doc \
 ## Cookie/session 使用示例
 
 只有在浏览器会话自动化不够用、并且你明确接受 session 具有完整账号权限时才使用。
+专用 profile 只能降低本机横向泄露范围，不能降低语雀账号权限。
 
 用同一个隔离 profile 登录：
 
@@ -235,5 +259,6 @@ skill 内置了 Azel 的默认语雀发布偏好：
 - 仓库默认忽略 `.env` 文件。
 - CI 中应使用受保护的 Secret 注入 `YUQUE_TOKEN`。
 - Cookie/session 模式权限最大，不能作为默认模式。
+- 专用浏览器 profile 不降低语雀账号权限，只是相比读取主浏览器 profile 降低本机暴露范围。
 - 浏览器会话自动化应使用隔离浏览器 profile；除非用户明确接受风险，否则不要导出 cookie。
 - 默认隔离浏览器 profile 是 `~/.local/share/yuque-publishing/browser-profile`。

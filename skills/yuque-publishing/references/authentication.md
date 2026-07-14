@@ -19,6 +19,8 @@ Let the user choose one mode before publishing:
 
 If official OAuth docs are available, prefer OAuth/app authorization over raw tokens. If official OAuth is not available, the Open API token mode remains the stable API path.
 
+Dedicated browser profiles do not reduce Yuque account permissions. They only reduce local exposure compared with reading the user's main browser profile.
+
 ## Supported token model
 
 Use a runtime environment variable:
@@ -90,6 +92,21 @@ Install Playwright before using browser-based modes:
 ```bash
 python3 -m pip install playwright
 python3 -m playwright install chromium
+```
+
+If system Chrome is installed, the helpers try it before Playwright's bundled Chromium. Override with:
+
+```bash
+export YUQUE_BROWSER_EXECUTABLE="/usr/bin/google-chrome"
+```
+
+Choose a mode first:
+
+```bash
+python3 scripts/yuque_auth.py select
+python3 scripts/yuque_auth.py select --mode token
+python3 scripts/yuque_auth.py select --mode browser
+python3 scripts/yuque_auth.py select --mode session
 ```
 
 Browser-session flow:

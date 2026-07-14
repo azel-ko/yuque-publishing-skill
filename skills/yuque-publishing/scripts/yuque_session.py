@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -20,6 +21,12 @@ DEFAULT_PROFILE_DIR = Path("~/.local/share/yuque-publishing/browser-profile").ex
 DEFAULT_SPACE_URL = "https://www.yuque.com/azel/zob9yu"
 DEFAULT_WEB_BASE_URL = "https://www.yuque.com"
 DEFAULT_DOC_ENDPOINT = "/api/docs"
+DEFAULT_BROWSER_PATHS = (
+    "/usr/bin/google-chrome",
+    "/usr/bin/google-chrome-stable",
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+)
 
 SENSITIVE_HEADER_RE = re.compile(
     r"((?:cookie|set-cookie|x-csrf-token|x-auth-token)\s*[:=]\s*)[^\n\r]+",
@@ -58,6 +65,16 @@ def ensure_private_dir(path: Path) -> None:
         pass
 
 
+def browser_executable() -> str | None:
+    configured = os.environ.get("YUQUE_BROWSER_EXECUTABLE")
+    if configured and Path(configured).exists():
+        return configured
+    for candidate in DEFAULT_BROWSER_PATHS:
+        if Path(candidate).exists():
+            return candidate
+    return None
+
+
 def load_body(path: str) -> str:
     try:
         return Path(path).read_text(encoding="utf-8")
@@ -71,11 +88,14 @@ def print_json(value: Any) -> None:
 
 def launch_context(playwright: Any, path: Path, *, headless: bool = True) -> Any:
     ensure_private_dir(path)
+    executable_path = browser_executable()
+    kwargs = {"executable_path": executable_path} if executable_path else {}
     return playwright.chromium.launch_persistent_context(
         str(path),
         headless=headless,
         viewport={"width": 1440, "height": 1000},
         accept_downloads=False,
+        **kwargs,
     )
 
 
@@ -145,6 +165,7 @@ def command_login(args: argparse.Namespace) -> int:
     ensure_private_dir(path)
     print(f"Opening isolated Yuque browser profile: {path}")
     print("Log in in the opened browser. Session values stay in this isolated profile.")
+    print("This still grants the full Yuque permissions of the logged-in account.")
     with sync_playwright() as p:
         context = launch_context(p, path, headless=False)
         page = context.pages[0] if context.pages else context.new_page()
@@ -181,6 +202,8 @@ def command_preflight(args: argparse.Namespace) -> int:
             "csrf_cookie_present": csrf_present,
             "book_id": book_id,
             "cookies_exported": False,
+            "yuque_permission": "full logged-in account permissions",
+            "local_exposure": "dedicated skill browser profile only",
         }
     )
     return 0
@@ -217,6 +240,8 @@ def command_create_doc(args: argparse.Namespace) -> int:
         "body_chars": len(body),
         "exports_cookies": False,
         "requires_risk_ack": True,
+        "yuque_permission": "full logged-in account permissions",
+        "local_exposure": "dedicated skill browser profile only; session values are used programmatically",
     }
     if not args.execute:
         print_json(dry_run_plan)

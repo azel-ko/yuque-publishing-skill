@@ -19,6 +19,12 @@ from typing import Any
 DEFAULT_PROFILE_DIR = Path("~/.local/share/yuque-publishing/browser-profile").expanduser()
 DEFAULT_SPACE_URL = "https://www.yuque.com/azel/zob9yu"
 DEFAULT_LOGIN_URL = "https://www.yuque.com/login"
+DEFAULT_BROWSER_PATHS = (
+    "/usr/bin/google-chrome",
+    "/usr/bin/google-chrome-stable",
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+)
 
 
 class YuqueBrowserError(RuntimeError):
@@ -60,13 +66,26 @@ def ensure_private_dir(path: Path) -> None:
         pass
 
 
+def browser_executable() -> str | None:
+    configured = os.environ.get("YUQUE_BROWSER_EXECUTABLE")
+    if configured and Path(configured).exists():
+        return configured
+    for candidate in DEFAULT_BROWSER_PATHS:
+        if Path(candidate).exists():
+            return candidate
+    return None
+
+
 def launch_context(playwright: Any, path: Path, *, headless: bool = False) -> Any:
     ensure_private_dir(path)
+    executable_path = browser_executable()
+    kwargs = {"executable_path": executable_path} if executable_path else {}
     context = playwright.chromium.launch_persistent_context(
         str(path),
         headless=headless,
         viewport={"width": 1440, "height": 1000},
         accept_downloads=False,
+        **kwargs,
     )
     context.grant_permissions(["clipboard-read", "clipboard-write"], origin="https://www.yuque.com")
     return context
@@ -79,6 +98,7 @@ def command_login(args: argparse.Namespace) -> int:
     login_url = f"{DEFAULT_LOGIN_URL}?goto={target}"
     print(f"Opening isolated Yuque browser profile: {path}")
     print("Log in in the opened browser window. Cookies stay inside this profile.")
+    print("This still grants the full Yuque permissions of the logged-in account.")
     with sync_playwright() as p:
         context = launch_context(p, path, headless=False)
         page = context.pages[0] if context.pages else context.new_page()
@@ -139,6 +159,8 @@ def command_create_doc(args: argparse.Namespace) -> int:
         "file": args.file,
         "body_chars": len(body),
         "exports_cookies": False,
+        "yuque_permission": "full logged-in account permissions",
+        "local_exposure": "dedicated skill browser profile only",
     }
     if not args.execute:
         print_json(plan)

@@ -49,9 +49,25 @@ Choose one authentication mode before publishing:
 
 The repository ships separate helpers for each path:
 
+- `yuque_auth.py`: choose an auth mode and print the right next commands.
 - `yuque_publish.py`: Open API token mode.
 - `yuque_browser.py`: browser-session UI mode; does not export cookies.
 - `yuque_session.py`: cookie/session mode; explicit advanced fallback.
+
+Run the selector before publishing:
+
+```bash
+python3 ~/.codex/skills/yuque-publishing/scripts/yuque_auth.py select
+```
+
+Non-interactive example:
+
+```bash
+python3 ~/.codex/skills/yuque-publishing/scripts/yuque_auth.py select \
+  --mode browser \
+  --title "Article Title" \
+  --file article.md
+```
 
 ## Get a Yuque Token or Official Auth
 
@@ -95,6 +111,12 @@ Browser-based modes require Playwright:
 ```bash
 python3 -m pip install playwright
 python3 -m playwright install chromium
+```
+
+If system Chrome is already installed, the helpers will try it before Playwright's bundled Chromium. You can also set:
+
+```bash
+export YUQUE_BROWSER_EXECUTABLE="/usr/bin/google-chrome"
 ```
 
 ## Open API Token Usage
@@ -145,6 +167,7 @@ python3 ~/.codex/skills/yuque-publishing/scripts/yuque_publish.py \
 ## Browser Session Usage
 
 Use this mode when you cannot create a Yuque API token but can log in in a browser.
+It has the full Yuque permissions of the logged-in account. The dedicated profile only limits local exposure to this skill's profile directory.
 
 Log in with an isolated profile:
 
@@ -177,6 +200,7 @@ The script opens Yuque, asks you to create/open a blank editor, then fills the t
 ## Cookie/Session Usage
 
 Use this only when browser-session automation is not enough and you explicitly accept that session credentials usually have full account permissions.
+The dedicated profile reduces local blast radius only; it does not reduce Yuque-side permissions.
 
 Log in with the same isolated profile:
 
@@ -235,5 +259,6 @@ Directory mapping is documented in `skills/yuque-publishing/references/publishin
 - `.env` files are ignored by this repository.
 - CI should inject `YUQUE_TOKEN` as a protected secret.
 - Cookie/session mode has the broadest permissions and should never be the default.
+- Dedicated browser profiles do not reduce Yuque account permissions; they only reduce local exposure compared with reading your main browser profile.
 - Browser session automation should use an isolated browser profile and should not export cookies unless the user explicitly asks for that risk.
 - The default isolated browser profile is `~/.local/share/yuque-publishing/browser-profile`.
