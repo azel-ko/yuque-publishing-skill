@@ -2,7 +2,11 @@
 
 English | [中文](README.zh-CN.md)
 
-Codex and Claude Code skill for preparing, dry-running, publishing, and updating Yuque articles with safe token handling.
+> Yuque/语雀 publishing Agent Skill for OpenAI Codex, Claude Code, and Agent Skills CLI. Publish Markdown articles to Yuque with Open API token, browser-session automation, or cookie/session fallback.
+
+**Keywords:** Yuque skill, 语雀 skill, Yuque API, OpenAI Codex skill, Claude Code skill, Agent Skills CLI, Markdown to Yuque, knowledge base publishing, browser session automation, cookie session publishing.
+
+Codex and Claude Code skill for preparing, dry-running, publishing, and updating Yuque articles with safe token handling. It is designed for both official Yuque Open API token users and non-Super Member users who need browser-session based publishing.
 
 ## What It Does
 
@@ -29,6 +33,8 @@ cp -a skills/yuque-publishing/. ~/.codex/skills/yuque-publishing/
 mkdir -p ~/.claude/skills/yuque-publishing
 cp -a skills/yuque-publishing/. ~/.claude/skills/yuque-publishing/
 ```
+
+![Yuque Publishing terminal demo](assets/demo.svg)
 
 2. Restart Codex or Claude Code.
 
@@ -158,7 +164,7 @@ If your account cannot create a token, choose either Browser session automation 
 Set the token in your shell:
 
 ```bash
-export YUQUE_TOKEN="your-yuque-token"
+export YUQUE_TOKEN="REDACTED"
 ```
 
 Optional settings:

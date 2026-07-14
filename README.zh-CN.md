@@ -2,7 +2,11 @@
 
 [English](README.md) | 中文
 
-这是一个兼容 Codex 和 Claude Code 的语雀发布 skill，负责整理文章、dry-run 预览、发布和更新语雀文档，并尽量保证 Token 不进入仓库、skill 文件或聊天记录。
+> 支持 OpenAI Codex、Claude Code 和 Agent Skills CLI 的 Yuque/语雀发布 Agent Skill。可以把 Markdown 文章发布到语雀，支持 Open API Token、浏览器会话自动化，以及 Cookie/session fallback。
+
+**关键词：** 语雀 skill、Yuque skill、Yuque API、OpenAI Codex skill、Claude Code skill、Agent Skills CLI、Markdown 发布到语雀、知识库发布、浏览器会话自动化、Cookie/session 发布。
+
+这是一个兼容 Codex 和 Claude Code 的语雀发布 skill，负责整理文章、dry-run 预览、发布和更新语雀文档，并尽量保证 Token 不进入仓库、skill 文件或聊天记录。它同时覆盖能创建语雀 Open API Token 的用户，以及无法创建 Token、需要浏览器会话发布的非超级会员用户。
 
 ## 功能
 
@@ -29,6 +33,8 @@ cp -a skills/yuque-publishing/. ~/.codex/skills/yuque-publishing/
 mkdir -p ~/.claude/skills/yuque-publishing
 cp -a skills/yuque-publishing/. ~/.claude/skills/yuque-publishing/
 ```
+
+![Yuque Publishing terminal demo](assets/demo.svg)
 
 2. 重启 Codex 或 Claude Code。
 
@@ -158,7 +164,7 @@ python3 ~/.codex/skills/yuque-publishing/scripts/yuque_auth.py select \
 在当前 shell 中设置：
 
 ```bash
-export YUQUE_TOKEN="your-yuque-token"
+export YUQUE_TOKEN="REDACTED"
 ```
 
 可选配置：
