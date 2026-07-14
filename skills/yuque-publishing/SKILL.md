@@ -82,12 +82,15 @@ python3 scripts/yuque_browser.py login --space-url https://www.yuque.com/azel/zo
 python3 scripts/yuque_browser.py create-doc --space-url https://www.yuque.com/azel/zob9yu --title "Article Title" --file article.md
 ```
 
+Use browser-session mode only when a visible guided UI flow is acceptable. For background publishing after the isolated profile is logged in, use the cookie/session helper in headless mode instead.
+
 Cookie/session helper:
 
 ```bash
 python3 scripts/yuque_session.py login --space-url https://www.yuque.com/azel/zob9yu
+python3 scripts/yuque_session.py preflight --space-url https://www.yuque.com/azel/zob9yu --headless
 python3 scripts/yuque_session.py create-doc --space-url https://www.yuque.com/azel/zob9yu --title "Article Title" --file article.md
-python3 scripts/yuque_session.py create-doc --space-url https://www.yuque.com/azel/zob9yu --title "Article Title" --file article.md --execute --i-understand-session-risk
+python3 scripts/yuque_session.py create-doc --space-url https://www.yuque.com/azel/zob9yu --title "Article Title" --file article.md --headless --execute --i-understand-session-risk
 ```
 
 ### 4. Dry-run first

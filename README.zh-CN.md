@@ -44,15 +44,15 @@ cp -a skills/yuque-publishing ~/.codex/skills/yuque-publishing
 | 模式 | 适合谁 | 权限范围 | 说明 |
 |---|---|---:|---|
 | 官方 OAuth / 应用授权 或 Open API Token | 能使用语雀官方开发者认证的用户，通常是付费或超级会员账号 | 如果语雀支持 scope，则可控 | 首选，最稳定。当前 helper 脚本实现的是 `X-Auth-Token` 的 Open API Token 路径。 |
-| 浏览器会话自动化 | 不能生成 API Token、但可以正常网页登录的非超级会员用户 | 等同当前网页登录态 | 比抓 cookie 更安全的 fallback。使用隔离浏览器 profile，通过 UI 自动化操作语雀，不导出 cookie。 |
-| Cookie/session 提取 | 明确接受风险的非超级会员用户 | 最大，通常等同完整账号登录权限 | 最高风险。Cookie 通常就是完整登录凭证。只使用 skill 的隔离 profile，真实写入必须传 `--i-understand-session-risk`。 |
+| 浏览器会话自动化 | 不能生成 API Token、可以正常网页登录、并接受可视化引导式 UI 流程的非超级会员用户 | 等同当前网页登录态 | 使用隔离浏览器 profile，通过 UI 自动化操作语雀，不导出 cookie。不适合后台静默发布。 |
+| Cookie/session 后台发布 | 明确接受风险、并希望登录后静默写入的非超级会员用户 | 最大，通常等同完整账号登录权限 | 最高风险。Session 通常就是完整登录凭证。只使用 skill 的隔离 profile，创建和预检默认 headless，真实写入必须传 `--i-understand-session-risk`。 |
 
 仓库按模式提供了独立脚本：
 
 - `yuque_auth.py`：选择认证模式，并打印对应的下一步命令。
 - `yuque_publish.py`：Open API Token 模式。
 - `yuque_browser.py`：浏览器会话 UI 模式，不导出 cookie。
-- `yuque_session.py`：Cookie/session 高级 fallback。
+- `yuque_session.py`：Cookie/session 后台/headless 发布模式。
 
 发布前先运行选择器：
 
@@ -176,6 +176,7 @@ python3 ~/.codex/skills/yuque-publishing/scripts/yuque_publish.py \
 
 当你不能创建语雀 API Token、但可以正常网页登录时，优先使用这个模式。
 它拥有当前登录语雀账号的完整权限。专用 profile 只限制本机暴露范围，不降低语雀侧权限。
+这个模式是可视化 UI 自动化，适合你愿意看到并操作语雀浏览器窗口的场景。
 
 用隔离 profile 登录：
 
@@ -209,8 +210,9 @@ python3 ~/.codex/skills/yuque-publishing/scripts/yuque_browser.py create-doc \
 
 ## Cookie/session 使用示例
 
-只有在浏览器会话自动化不够用、并且你明确接受 session 具有完整账号权限时才使用。
+当隔离 profile 已经登录、并且你希望后台静默发布文档时，使用这个模式；前提是你明确接受 session 具有完整账号权限。
 专用 profile 只能降低本机横向泄露范围，不能降低语雀账号权限。
+文档创建默认 headless 运行，不会打开 Google Chrome 窗口。只有调试时才传 `--no-headless`。
 
 用同一个隔离 profile 登录：
 
@@ -223,7 +225,8 @@ python3 ~/.codex/skills/yuque-publishing/scripts/yuque_session.py login \
 
 ```bash
 python3 ~/.codex/skills/yuque-publishing/scripts/yuque_session.py preflight \
-  --space-url https://www.yuque.com/azel/zob9yu
+  --space-url https://www.yuque.com/azel/zob9yu \
+  --headless
 ```
 
 dry-run web-session 创建请求：
@@ -244,6 +247,7 @@ python3 ~/.codex/skills/yuque-publishing/scripts/yuque_session.py create-doc \
   --title "文章标题" \
   --slug article-title \
   --file article.md \
+  --headless \
   --execute \
   --i-understand-session-risk
 ```

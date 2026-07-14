@@ -25,13 +25,13 @@ MODES = {
         "label": "Browser session automation",
         "yuque_permission": "Full permissions of the logged-in Yuque account.",
         "local_exposure": "Only the dedicated skill browser profile is exposed.",
-        "best_for": "Users who cannot create a token but can log in in a browser.",
+        "best_for": "Users who cannot create a token and are willing to use a visible guided Yuque browser window.",
     },
     "session": {
-        "label": "Cookie/session fallback",
+        "label": "Cookie/session background publishing",
         "yuque_permission": "Full permissions of the logged-in Yuque account.",
         "local_exposure": "Only the dedicated skill browser profile is exposed, but session values are used programmatically.",
-        "best_for": "Advanced fallback when browser UI automation is insufficient.",
+        "best_for": "Background/headless publishing after the isolated browser profile is already logged in.",
     },
 }
 
@@ -78,7 +78,7 @@ def session_commands(args: argparse.Namespace) -> list[str]:
     file_arg = args.file or "article.md"
     return [
         f"python3 scripts/yuque_session.py login --space-url {quote_shell(args.space_url)}",
-        f"python3 scripts/yuque_session.py preflight --space-url {quote_shell(args.space_url)}",
+        f"python3 scripts/yuque_session.py preflight --space-url {quote_shell(args.space_url)} --headless",
         (
             "python3 scripts/yuque_session.py create-doc "
             f"--space-url {quote_shell(args.space_url)} --title {quote_shell(title)} --file {quote_shell(file_arg)}"
@@ -86,7 +86,7 @@ def session_commands(args: argparse.Namespace) -> list[str]:
         (
             "python3 scripts/yuque_session.py create-doc "
             f"--space-url {quote_shell(args.space_url)} --title {quote_shell(title)} --file {quote_shell(file_arg)} "
-            "--execute --i-understand-session-risk"
+            "--headless --execute --i-understand-session-risk"
         ),
     ]
 

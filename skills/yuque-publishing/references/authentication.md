@@ -14,8 +14,8 @@ Let the user choose one mode before publishing:
 | Mode | Intended users | Permission level | Implementation rule |
 |---|---|---:|---|
 | Official OAuth / app authorization or Open API token | Users who can use Yuque developer auth, often paid or Super Member accounts | Prefer scoped credentials when available | Use official APIs. The current helper supports `X-Auth-Token`. |
-| Browser session automation | Non-Super Member users who can log in through the browser | Same as browser login | Use an isolated browser profile and UI automation. Do not export cookies by default. |
-| Cookie/session extraction | Non-Super Member users who explicitly accept the risk | Maximum account-level permission | Treat as full account credentials. Never make it default, never print values, and require explicit consent each time. |
+| Browser session automation | Non-Super Member users who can log in through the browser and accept a visible guided UI flow | Same as browser login | Use an isolated browser profile and UI automation. Do not export cookies by default. Not intended for silent background publishing. |
+| Cookie/session background publishing | Non-Super Member users who explicitly accept the risk and want silent writes after login | Maximum account-level permission | Treat as full account credentials. Run create/preflight headless by default, never print values, and require explicit consent each time. |
 
 If official OAuth docs are available, prefer OAuth/app authorization over raw tokens. If official OAuth is not available, the Open API token mode remains the stable API path.
 
@@ -76,8 +76,8 @@ Do not implement OAuth unless the user explicitly chooses that product path and 
 
 Browser-based auth has two variants:
 
-- Browser session automation: open a browser profile, let the user log in, and operate Yuque's UI without exporting raw cookies. Prefer this for non-Super Member accounts.
-- Cookie/session extraction: use only when the user explicitly chooses it and understands that the extracted session usually has maximum account permissions. Do not add automated cookie extraction to default workflows.
+- Browser session automation: open a browser profile, let the user log in, and operate Yuque's UI without exporting raw cookies. Use this when visible browser work is acceptable.
+- Cookie/session extraction: use only when the user explicitly chooses it and understands that the session usually has maximum account permissions. Use this for background/headless publishing after the isolated profile is already logged in. Do not print or export raw session values.
 
 ## Helper commands
 
@@ -100,7 +100,7 @@ If system Chrome is installed, the helpers try it before Playwright's bundled Ch
 export YUQUE_BROWSER_EXECUTABLE="/usr/bin/google-chrome"
 ```
 
-If the Chrome window opens and immediately closes, the helper is probably running without an interactive stdin. Login commands keep the browser open for 30 minutes by default in non-interactive runs; pass `--keep-open-seconds 0` to keep it open until the command is stopped. Guided `browser-session create-doc --execute` still requires an interactive terminal because it waits for manual editor focus steps.
+If the Chrome window opens and immediately closes, the helper is probably running without an interactive stdin. Login commands keep the browser open for 30 minutes by default in non-interactive runs; pass `--keep-open-seconds 0` to keep it open until the command is stopped. Guided `browser-session create-doc --execute` still requires an interactive terminal because it waits for manual editor focus steps. For silent background publishing, use `yuque_session.py create-doc --headless --execute --i-understand-session-risk`.
 
 If Yuque verification fails in the new isolated profile, ask the user to try another official login path in the same browser window, such as WeChat or DingTalk app QR-code login. The session remains scoped to the dedicated profile, and the skill should still avoid reading passwords, cookies, or session values unless the user explicitly chooses cookie/session mode.
 
@@ -125,9 +125,9 @@ Cookie/session flow:
 
 ```bash
 python3 scripts/yuque_session.py login --space-url https://www.yuque.com/azel/zob9yu
-python3 scripts/yuque_session.py preflight --space-url https://www.yuque.com/azel/zob9yu
+python3 scripts/yuque_session.py preflight --space-url https://www.yuque.com/azel/zob9yu --headless
 python3 scripts/yuque_session.py create-doc --space-url https://www.yuque.com/azel/zob9yu --title "Title" --file article.md
-python3 scripts/yuque_session.py create-doc --space-url https://www.yuque.com/azel/zob9yu --title "Title" --file article.md --execute --i-understand-session-risk
+python3 scripts/yuque_session.py create-doc --space-url https://www.yuque.com/azel/zob9yu --title "Title" --file article.md --headless --execute --i-understand-session-risk
 ```
 
 The cookie/session helper defaults to `/api/docs`, a Yuque web endpoint that may change. If Yuque changes it, pass `--endpoint` and `--book-id` explicitly after validating the current web request shape.

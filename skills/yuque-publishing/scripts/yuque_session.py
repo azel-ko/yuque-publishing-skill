@@ -222,6 +222,7 @@ def command_preflight(args: argparse.Namespace) -> int:
     print_json(
         {
             "mode": "cookie-session",
+            "headless": args.headless,
             "profile_dir": str(path),
             "space_url": args.space_url,
             "current_url": current_url,
@@ -265,6 +266,7 @@ def command_create_doc(args: argparse.Namespace) -> int:
         "title": args.title,
         "slug": args.slug,
         "format": args.format,
+        "headless": args.headless,
         "body_chars": len(body),
         "exports_cookies": False,
         "requires_risk_ack": True,
@@ -327,7 +329,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     preflight = subparsers.add_parser("preflight", help="inspect isolated profile login state")
     preflight.add_argument("--space-url", default=DEFAULT_SPACE_URL)
-    preflight.add_argument("--headless", action="store_true")
+    preflight.add_argument(
+        "--headless",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="run without opening a browser window (default); pass --no-headless for debugging",
+    )
     preflight.set_defaults(func=command_preflight)
 
     create = subparsers.add_parser("create-doc", help="create a document through Yuque web session API")
@@ -343,7 +350,12 @@ def build_parser() -> argparse.ArgumentParser:
     visibility = create.add_mutually_exclusive_group()
     visibility.add_argument("--public", dest="public", action="store_true", default=None)
     visibility.add_argument("--private", dest="public", action="store_false")
-    create.add_argument("--headless", action="store_true")
+    create.add_argument(
+        "--headless",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="run without opening a browser window (default); pass --no-headless for debugging",
+    )
     create.add_argument("--execute", action="store_true", help="perform the session request")
     create.add_argument(
         "--i-understand-session-risk",

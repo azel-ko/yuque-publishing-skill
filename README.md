@@ -44,15 +44,15 @@ Choose one authentication mode before publishing:
 | Mode | Who should use it | Permission level | Notes |
 |---|---|---:|---|
 | Official OAuth / app authorization or Open API token | Users who can use Yuque's official developer auth, often paid or Super Member accounts | Scoped when Yuque supports scopes | Preferred and most stable. The included helper currently implements the Open API token path with `X-Auth-Token`. |
-| Browser session automation | Non-Super Member users who can log in in a browser but cannot create an API token | Same as the logged-in browser session | Safer fallback than extracting cookies. Uses an isolated browser profile and operates the Yuque UI without exporting cookies. |
-| Cookie/session extraction | Non-Super Member users who explicitly accept the risk | Maximum account-level permission | Highest risk. Cookies usually act like full login credentials. Uses only the isolated skill profile and requires `--i-understand-session-risk` for live writes. |
+| Browser session automation | Non-Super Member users who can log in in a browser and accept a visible guided UI flow | Same as the logged-in browser session | Uses an isolated browser profile and operates the Yuque UI without exporting cookies. Not intended for silent background publishing. |
+| Cookie/session background publishing | Non-Super Member users who explicitly accept the risk and want silent writes after login | Maximum account-level permission | Highest risk. Session credentials usually act like full login credentials. Uses only the isolated skill profile, runs create/preflight headless by default, and requires `--i-understand-session-risk` for live writes. |
 
 The repository ships separate helpers for each path:
 
 - `yuque_auth.py`: choose an auth mode and print the right next commands.
 - `yuque_publish.py`: Open API token mode.
 - `yuque_browser.py`: browser-session UI mode; does not export cookies.
-- `yuque_session.py`: cookie/session mode; explicit advanced fallback.
+- `yuque_session.py`: cookie/session mode for explicit background/headless publishing.
 
 Run the selector before publishing:
 
@@ -176,6 +176,7 @@ python3 ~/.codex/skills/yuque-publishing/scripts/yuque_publish.py \
 
 Use this mode when you cannot create a Yuque API token but can log in in a browser.
 It has the full Yuque permissions of the logged-in account. The dedicated profile only limits local exposure to this skill's profile directory.
+This mode is visible UI automation. Use it when you are willing to see and operate the Yuque browser window.
 
 Log in with an isolated profile:
 
@@ -209,8 +210,9 @@ The script opens Yuque, asks you to create/open a blank editor, then fills the t
 
 ## Cookie/Session Usage
 
-Use this only when browser-session automation is not enough and you explicitly accept that session credentials usually have full account permissions.
+Use this when you want background publishing after the isolated profile is already logged in and you explicitly accept that session credentials usually have full account permissions.
 The dedicated profile reduces local blast radius only; it does not reduce Yuque-side permissions.
+Document creation runs headless by default, so it does not open a Google Chrome window. Pass `--no-headless` only when debugging.
 
 Log in with the same isolated profile:
 
@@ -223,7 +225,8 @@ Inspect login state without printing cookies:
 
 ```bash
 python3 ~/.codex/skills/yuque-publishing/scripts/yuque_session.py preflight \
-  --space-url https://www.yuque.com/azel/zob9yu
+  --space-url https://www.yuque.com/azel/zob9yu \
+  --headless
 ```
 
 Dry-run the web-session create request:
@@ -244,6 +247,7 @@ python3 ~/.codex/skills/yuque-publishing/scripts/yuque_session.py create-doc \
   --title "Article Title" \
   --slug article-title \
   --file article.md \
+  --headless \
   --execute \
   --i-understand-session-risk
 ```
