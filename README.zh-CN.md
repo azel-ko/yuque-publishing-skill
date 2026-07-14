@@ -18,6 +18,9 @@
 1. 按你使用的 agent 安装 skill：
 
 ```bash
+# Agent Skills CLI
+npx skills add https://github.com/azel-ko/yuque-publishing-skill
+
 # Codex
 mkdir -p ~/.codex/skills/yuque-publishing
 cp -a skills/yuque-publishing/. ~/.codex/skills/yuque-publishing/
@@ -50,6 +53,14 @@ python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-githu
 ```
 
 安装完成后重启 Codex，让新 skill 被发现。
+
+### Agent Skills CLI
+
+适用于 Claude Code、Cursor 和其他兼容 Agent Skills 的客户端：
+
+```bash
+npx skills add https://github.com/azel-ko/yuque-publishing-skill
+```
 
 ### Codex：本地手动安装
 

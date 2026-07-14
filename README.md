@@ -18,6 +18,9 @@ Codex and Claude Code skill for preparing, dry-running, publishing, and updating
 1. Install the skill for the agent you use:
 
 ```bash
+# Agent Skills CLI
+npx skills add https://github.com/azel-ko/yuque-publishing-skill
+
 # Codex
 mkdir -p ~/.codex/skills/yuque-publishing
 cp -a skills/yuque-publishing/. ~/.codex/skills/yuque-publishing/
@@ -50,6 +53,14 @@ python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-githu
 ```
 
 Restart Codex after installation so the new skill is discovered.
+
+### Agent Skills CLI
+
+For Claude Code, Cursor, and other compatible Agent Skills clients:
+
+```bash
+npx skills add https://github.com/azel-ko/yuque-publishing-skill
+```
 
 ### Codex: Manual Local Install
 

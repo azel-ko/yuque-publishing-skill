@@ -1,0 +1,39 @@
+{
+  "name": "yuque-publishing",
+  "owner": {
+    "name": "Azel"
+  },
+  "metadata": {
+    "description": "Yuque publishing skill for Claude Code, Codex, and compatible Agent Skills installers.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "yuque-publishing",
+      "source": "./",
+      "description": "Publish, update, or prepare structured Yuque knowledge base articles with safe authentication handling.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Azel"
+      },
+      "homepage": "https://github.com/azel-ko/yuque-publishing-skill",
+      "repository": "https://github.com/azel-ko/yuque-publishing-skill",
+      "license": "MIT",
+      "keywords": [
+        "yuque",
+        "publishing",
+        "knowledge-base",
+        "agent-skills",
+        "claude-code",
+        "codex"
+      ],
+      "category": "external-integrations",
+      "tags": [
+        "yuque",
+        "knowledge-base",
+        "publishing",
+        "documentation"
+      ]
+    }
+  ]
+}

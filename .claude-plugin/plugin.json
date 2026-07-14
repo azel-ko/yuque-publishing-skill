@@ -1,0 +1,20 @@
+{
+  "name": "yuque-publishing",
+  "version": "0.1.0",
+  "description": "Publish, update, or prepare structured Yuque knowledge base articles with safe authentication handling.",
+  "author": {
+    "name": "Azel"
+  },
+  "homepage": "https://github.com/azel-ko/yuque-publishing-skill",
+  "repository": "https://github.com/azel-ko/yuque-publishing-skill",
+  "license": "MIT",
+  "keywords": [
+    "yuque",
+    "publishing",
+    "knowledge-base",
+    "agent-skills",
+    "claude-code",
+    "codex"
+  ],
+  "skills": "./skills/"
+}
