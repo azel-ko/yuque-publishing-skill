@@ -13,6 +13,7 @@ from typing import Any
 DEFAULT_SPACE_URL = "https://www.yuque.com/azel/zob9yu"
 DEFAULT_NAMESPACE = "azel/zob9yu"
 DEFAULT_PROFILE_DIR = Path("~/.local/share/yuque-publishing/browser-profile").expanduser()
+DEFAULT_SKILL_DIR = Path(__file__).resolve().parents[1]
 
 MODES = {
     "token": {
@@ -40,18 +41,30 @@ def print_json(value: Any) -> None:
     print(json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True))
 
 
+def skill_dir() -> Path:
+    configured = os.environ.get("CLAUDE_SKILL_DIR") or os.environ.get("YUQUE_SKILL_DIR")
+    if configured:
+        return Path(configured).expanduser()
+    return DEFAULT_SKILL_DIR
+
+
+def script_cmd(script_name: str) -> str:
+    return f"python3 {quote_shell(str(skill_dir() / 'scripts' / script_name))}"
+
+
 def token_commands(args: argparse.Namespace) -> list[str]:
     title = args.title or "Article Title"
     file_arg = args.file or "article.md"
+    publish = script_cmd("yuque_publish.py")
     return [
         f"export YUQUE_TOKEN=\"...\"",
-        f"python3 scripts/yuque_publish.py preflight --namespace {args.namespace}",
+        f"{publish} preflight --namespace {args.namespace}",
         (
-            "python3 scripts/yuque_publish.py create-doc "
+            f"{publish} create-doc "
             f"--namespace {args.namespace} --title {quote_shell(title)} --file {quote_shell(file_arg)}"
         ),
         (
-            "python3 scripts/yuque_publish.py create-doc "
+            f"{publish} create-doc "
             f"--namespace {args.namespace} --title {quote_shell(title)} --file {quote_shell(file_arg)} --execute"
         ),
     ]
@@ -60,14 +73,15 @@ def token_commands(args: argparse.Namespace) -> list[str]:
 def browser_commands(args: argparse.Namespace) -> list[str]:
     title = args.title or "Article Title"
     file_arg = args.file or "article.md"
+    browser = script_cmd("yuque_browser.py")
     return [
-        f"python3 scripts/yuque_browser.py login --space-url {quote_shell(args.space_url)}",
+        f"{browser} login --space-url {quote_shell(args.space_url)}",
         (
-            "python3 scripts/yuque_browser.py create-doc "
+            f"{browser} create-doc "
             f"--space-url {quote_shell(args.space_url)} --title {quote_shell(title)} --file {quote_shell(file_arg)}"
         ),
         (
-            "python3 scripts/yuque_browser.py create-doc "
+            f"{browser} create-doc "
             f"--space-url {quote_shell(args.space_url)} --title {quote_shell(title)} --file {quote_shell(file_arg)} --execute"
         ),
     ]
@@ -76,15 +90,16 @@ def browser_commands(args: argparse.Namespace) -> list[str]:
 def session_commands(args: argparse.Namespace) -> list[str]:
     title = args.title or "Article Title"
     file_arg = args.file or "article.md"
+    session = script_cmd("yuque_session.py")
     return [
-        f"python3 scripts/yuque_session.py login --space-url {quote_shell(args.space_url)}",
-        f"python3 scripts/yuque_session.py preflight --space-url {quote_shell(args.space_url)} --headless",
+        f"{session} login --space-url {quote_shell(args.space_url)}",
+        f"{session} preflight --space-url {quote_shell(args.space_url)} --headless",
         (
-            "python3 scripts/yuque_session.py create-doc "
+            f"{session} create-doc "
             f"--space-url {quote_shell(args.space_url)} --title {quote_shell(title)} --file {quote_shell(file_arg)}"
         ),
         (
-            "python3 scripts/yuque_session.py create-doc "
+            f"{session} create-doc "
             f"--space-url {quote_shell(args.space_url)} --title {quote_shell(title)} --file {quote_shell(file_arg)} "
             "--headless --execute --i-understand-session-risk"
         ),
@@ -128,6 +143,7 @@ def command_select(args: argparse.Namespace) -> int:
         "local_exposure": MODES[mode]["local_exposure"],
         "space_url": args.space_url,
         "namespace": args.namespace,
+        "skill_dir": str(skill_dir()),
         "dedicated_profile_dir": str(DEFAULT_PROFILE_DIR),
         "token_present": bool(os.environ.get("YUQUE_TOKEN")),
         "commands": command_map[mode](args),

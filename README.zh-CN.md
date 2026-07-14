@@ -2,7 +2,7 @@
 
 [English](README.md) | 中文
 
-这是一个用于 Codex 的语雀发布 skill，负责整理文章、dry-run 预览、发布和更新语雀文档，并尽量保证 Token 不进入仓库、skill 文件或聊天记录。
+这是一个兼容 Codex 和 Claude Code 的语雀发布 skill，负责整理文章、dry-run 预览、发布和更新语雀文档，并尽量保证 Token 不进入仓库、skill 文件或聊天记录。
 
 ## 功能
 
@@ -15,7 +15,7 @@
 
 ## 安装
 
-### 从 GitHub 安装
+### Codex：从 GitHub 安装
 
 使用 Codex 的 skill installer：
 
@@ -27,15 +27,44 @@ python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-githu
 
 安装完成后重启 Codex，让新 skill 被发现。
 
-### 本地手动安装
+### Codex：本地手动安装
 
 如果已经克隆了这个仓库：
 
 ```bash
-cp -a skills/yuque-publishing ~/.codex/skills/yuque-publishing
+mkdir -p ~/.codex/skills/yuque-publishing
+cp -a skills/yuque-publishing/. ~/.codex/skills/yuque-publishing/
 ```
 
 然后重启 Codex。
+
+### Claude Code CLI：个人安装
+
+Claude Code 的个人 skill 路径是 `~/.claude/skills/<skill-name>/SKILL.md`。官方文档：https://code.claude.com/docs/en/skills
+
+如果已经克隆了这个仓库：
+
+```bash
+mkdir -p ~/.claude/skills/yuque-publishing
+cp -a skills/yuque-publishing/. ~/.claude/skills/yuque-publishing/
+```
+
+启动或重启 Claude Code，然后可以直接调用：
+
+```text
+/yuque-publishing
+```
+
+在 Claude Code 中，skill 可以通过 `${CLAUDE_SKILL_DIR}` 引用自身目录下的脚本。仓库里的 `yuque_auth.py select` 也会输出当前安装位置下的脚本路径，所以即使 Claude Code 从其他项目目录启动，生成的命令也能找到脚本。
+
+下面的示例默认使用 Codex 安装路径。在 Claude Code 中，建议先运行选择器；或者在已调用的 skill 里把 `~/.codex/skills/yuque-publishing` 替换为 `${CLAUDE_SKILL_DIR}`。
+
+也可以安装为项目级 skill：
+
+```bash
+mkdir -p .claude/skills/yuque-publishing
+cp -a skills/yuque-publishing/. .claude/skills/yuque-publishing/
+```
 
 ## 认证方式选择
 
@@ -85,7 +114,7 @@ python3 ~/.codex/skills/yuque-publishing/scripts/yuque_auth.py select \
 5. 复制 Token，并保存到本地 shell 环境变量或密钥管理器。
 6. 如果 Token 曾经出现在聊天、日志或仓库里，立即撤销并重新生成。
 
-不要把 Token 提交到仓库，也不要把 Token 粘贴到 Codex 聊天里。
+不要把 Token 提交到仓库，也不要把 Token 粘贴到 Codex 或 Claude Code 聊天里。
 
 如果你的账号不能创建 Token，就从上面的认证方式里选择“浏览器会话自动化”或“Cookie/session 提取”。优先选浏览器会话自动化，因为它可以避免导出原始 session 凭证。
 

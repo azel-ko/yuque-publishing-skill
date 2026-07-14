@@ -2,7 +2,7 @@
 
 English | [中文](README.zh-CN.md)
 
-Codex skill for preparing, dry-running, publishing, and updating Yuque articles with safe token handling.
+Codex and Claude Code skill for preparing, dry-running, publishing, and updating Yuque articles with safe token handling.
 
 ## What It Does
 
@@ -15,7 +15,7 @@ Codex skill for preparing, dry-running, publishing, and updating Yuque articles 
 
 ## Install
 
-### Install from GitHub
+### Codex: Install from GitHub
 
 Use Codex's skill installer:
 
@@ -27,15 +27,44 @@ python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-githu
 
 Restart Codex after installation so the new skill is discovered.
 
-### Manual Local Install
+### Codex: Manual Local Install
 
 If you already cloned this repository:
 
 ```bash
-cp -a skills/yuque-publishing ~/.codex/skills/yuque-publishing
+mkdir -p ~/.codex/skills/yuque-publishing
+cp -a skills/yuque-publishing/. ~/.codex/skills/yuque-publishing/
 ```
 
 Then restart Codex.
+
+### Claude Code CLI: Personal Install
+
+Claude Code skills live at `~/.claude/skills/<skill-name>/SKILL.md` for personal use. Official docs: https://code.claude.com/docs/en/skills
+
+If you already cloned this repository:
+
+```bash
+mkdir -p ~/.claude/skills/yuque-publishing
+cp -a skills/yuque-publishing/. ~/.claude/skills/yuque-publishing/
+```
+
+Start or restart Claude Code, then invoke the skill directly:
+
+```text
+/yuque-publishing
+```
+
+Inside Claude Code, the skill can reference bundled scripts through `${CLAUDE_SKILL_DIR}`. The included `yuque_auth.py select` helper also prints resolved script paths for the current installation, so the generated commands work even when Claude is running from another project directory.
+
+The examples below use the Codex install path. In Claude Code, either run the selector first or replace `~/.codex/skills/yuque-publishing` with `${CLAUDE_SKILL_DIR}` inside an invoked skill.
+
+Project-level install is also supported:
+
+```bash
+mkdir -p .claude/skills/yuque-publishing
+cp -a skills/yuque-publishing/. .claude/skills/yuque-publishing/
+```
 
 ## Authentication Choices
 
@@ -85,7 +114,7 @@ If your account can create tokens:
 5. Copy the token once and store it in your local shell or secret manager.
 6. If a token is ever pasted into chat, logs, or a repository, revoke it and create a new one.
 
-Do not commit the token. Do not paste it into Codex chat.
+Do not commit the token. Do not paste it into Codex or Claude Code chat.
 
 If your account cannot create a token, choose either Browser session automation or Cookie/session extraction from the authentication choices above. Prefer Browser session automation because it can avoid exporting raw session credentials.
 

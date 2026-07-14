@@ -108,10 +108,13 @@ Choose a mode first:
 
 ```bash
 python3 scripts/yuque_auth.py select
+python3 "${CLAUDE_SKILL_DIR}/scripts/yuque_auth.py" select
 python3 scripts/yuque_auth.py select --mode token
 python3 scripts/yuque_auth.py select --mode browser
 python3 scripts/yuque_auth.py select --mode session
 ```
+
+In Claude Code CLI, prefer `${CLAUDE_SKILL_DIR}` when running bundled scripts. The selector prints resolved script paths for the active installation, so follow the generated commands after choosing a mode.
 
 Browser-session flow:
 

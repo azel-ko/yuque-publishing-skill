@@ -28,6 +28,14 @@ Prepare and publish structured documents to Yuque while keeping credentials out 
 6. Confirm the final target and operation before a non-dry-run create/update.
 7. Verify the returned Yuque URL or fetch the page after publishing.
 
+## Runtime compatibility
+
+Use this skill from Codex or Claude Code CLI.
+
+- In Claude Code, invoke it with `/yuque-publishing`. Claude Code exposes `${CLAUDE_SKILL_DIR}` as the directory that contains this `SKILL.md`; use it when running bundled scripts.
+- In Codex or local shells, run bundled scripts by absolute path, from the skill directory, or through `scripts/yuque_auth.py select`.
+- Prefer the auth selector because it prints commands with resolved script paths for the current installation.
+
 ## Workflow
 
 ### 1. Scope the publish
@@ -70,6 +78,7 @@ Selection helper:
 
 ```bash
 python3 scripts/yuque_auth.py select
+python3 "${CLAUDE_SKILL_DIR}/scripts/yuque_auth.py" select
 python3 scripts/yuque_auth.py select --mode browser --title "Article Title" --file article.md
 ```
 
