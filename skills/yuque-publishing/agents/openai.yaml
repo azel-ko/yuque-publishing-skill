@@ -1,0 +1,4 @@
+interface:
+  display_name: "Yuque Publishing"
+  short_description: "Publish structured articles to Yuque safely"
+  default_prompt: "Use $yuque-publishing to publish this article draft to Yuque with a dry-run first."
