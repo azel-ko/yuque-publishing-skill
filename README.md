@@ -13,6 +13,30 @@ Codex and Claude Code skill for preparing, dry-running, publishing, and updating
 - Runs write operations as dry-runs by default.
 - Requires explicit `--execute` before creating or updating Yuque documents.
 
+## Quick Start
+
+1. Install the skill for the agent you use:
+
+```bash
+# Codex
+mkdir -p ~/.codex/skills/yuque-publishing
+cp -a skills/yuque-publishing/. ~/.codex/skills/yuque-publishing/
+
+# Claude Code
+mkdir -p ~/.claude/skills/yuque-publishing
+cp -a skills/yuque-publishing/. ~/.claude/skills/yuque-publishing/
+```
+
+2. Restart Codex or Claude Code.
+
+3. In chat, ask the agent to use the skill. For Claude Code, you can invoke it directly:
+
+```text
+/yuque-publishing
+```
+
+4. Provide the article content or file path in chat, plus the target Yuque space if it is not the default. The skill will choose the auth flow, run a dry-run first, and only write after you confirm the create/update action.
+
 ## Install
 
 ### Codex: Install from GitHub

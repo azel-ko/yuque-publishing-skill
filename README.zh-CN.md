@@ -13,6 +13,30 @@
 - 写入操作默认 dry-run。
 - 只有显式传入 `--execute` 时才会创建或更新语雀文档。
 
+## 快速开始
+
+1. 按你使用的 agent 安装 skill：
+
+```bash
+# Codex
+mkdir -p ~/.codex/skills/yuque-publishing
+cp -a skills/yuque-publishing/. ~/.codex/skills/yuque-publishing/
+
+# Claude Code
+mkdir -p ~/.claude/skills/yuque-publishing
+cp -a skills/yuque-publishing/. ~/.claude/skills/yuque-publishing/
+```
+
+2. 重启 Codex 或 Claude Code。
+
+3. 在聊天里让 agent 使用这个 skill。Claude Code 可以直接调用：
+
+```text
+/yuque-publishing
+```
+
+4. 在聊天里提供文章内容或文件路径；如果不是默认语雀知识库，再说明目标空间。skill 会选择认证流程，先 dry-run，只有你确认创建或更新后才会写入。
+
 ## 安装
 
 ### Codex：从 GitHub 安装
