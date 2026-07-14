@@ -36,14 +36,26 @@ cp -a skills/yuque-publishing ~/.codex/skills/yuque-publishing
 
 然后重启 Codex。
 
-## 获取语雀 Token
+## 认证方式选择
+
+发布前先选择一种认证方式：
+
+| 模式 | 适合谁 | 权限范围 | 说明 |
+|---|---|---:|---|
+| 官方 OAuth / 应用授权 或 Open API Token | 能使用语雀官方开发者认证的用户，通常是付费或超级会员账号 | 如果语雀支持 scope，则可控 | 首选，最稳定。当前 helper 脚本实现的是 `X-Auth-Token` 的 Open API Token 路径。 |
+| 浏览器会话自动化 | 不能生成 API Token、但可以正常网页登录的非超级会员用户 | 等同当前网页登录态 | 比抓 cookie 更安全的 fallback。应使用隔离浏览器 profile，通过 UI 自动化操作语雀，不导出 cookie。 |
+| Cookie/session 提取 | 明确接受风险的非超级会员用户 | 最大，通常等同完整账号登录权限 | 最高风险。Cookie 通常就是完整登录凭证。只能作为显式选择的高级 fallback，不能打印、提交或分享 session 值。 |
+
+当前仓库先把三种模式说明清楚；随仓库提供的 helper 脚本目前只实现 Open API Token 模式。浏览器相关模式应作为独立命令添加，让用户明确选择后才启用。
+
+## 获取语雀 Token 或官方授权
 
 语雀开放 API 需要 Token 认证，请求时通过 HTTP Header `X-Auth-Token` 传入。官方文档：
 
 - https://www.yuque.com/yuque/developer/api
 - https://www.yuque.com/yuque/developer/openapi
 
-获取步骤：
+如果你的账号可以创建 Token：
 
 1. 登录语雀。
 2. 打开 Token 设置页：https://www.yuque.com/settings/tokens
@@ -53,6 +65,8 @@ cp -a skills/yuque-publishing ~/.codex/skills/yuque-publishing
 6. 如果 Token 曾经出现在聊天、日志或仓库里，立即撤销并重新生成。
 
 不要把 Token 提交到仓库，也不要把 Token 粘贴到 Codex 聊天里。
+
+如果你的账号不能创建 Token，就从上面的认证方式里选择“浏览器会话自动化”或“Cookie/session 提取”。优先选浏览器会话自动化，因为它可以避免导出原始 session 凭证。
 
 ## 配置认证
 
@@ -132,3 +146,5 @@ skill 内置了 Azel 的默认语雀发布偏好：
 - helper 脚本会在错误输出里遮蔽 Token。
 - 仓库默认忽略 `.env` 文件。
 - CI 中应使用受保护的 Secret 注入 `YUQUE_TOKEN`。
+- Cookie/session 模式权限最大，不能作为默认模式。
+- 浏览器会话自动化应使用隔离浏览器 profile；除非用户明确接受风险，否则不要导出 cookie。

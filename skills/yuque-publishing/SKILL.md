@@ -23,7 +23,7 @@ Prepare and publish structured documents to Yuque while keeping credentials out 
    - `安全与权限`
    - `项目案例`
    - `文章草稿`
-4. Read `references/authentication.md` before using credentials. Use `YUQUE_TOKEN` from the runtime environment; never write tokens into files.
+4. Read `references/authentication.md` before using credentials. Ask the user to choose official OAuth/app authorization or Open API token, browser session automation, or cookie/session extraction. Default to official auth/token when available.
 5. Run a dry-run with `scripts/yuque_publish.py` and inspect the payload.
 6. Confirm the final target and operation before a non-dry-run create/update.
 7. Verify the returned Yuque URL or fetch the page after publishing.
@@ -55,7 +55,7 @@ Convert the source into clean Markdown unless the user or existing page requires
 
 Follow `references/authentication.md`.
 
-Use this model by default:
+Use official auth or Open API token by default when available:
 
 ```bash
 export YUQUE_TOKEN="..."
@@ -63,6 +63,8 @@ python3 scripts/yuque_publish.py preflight --namespace azel/zob9yu
 ```
 
 Do not ask the user to paste a token into chat. If a token has already appeared in chat, tell the user to rotate it before use.
+
+For non-Super Member accounts that cannot create tokens, offer browser session automation first. Offer cookie/session extraction only after explicitly stating that it has the broadest permissions and should be treated like a password.
 
 ### 4. Dry-run first
 

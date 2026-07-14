@@ -36,14 +36,26 @@ cp -a skills/yuque-publishing ~/.codex/skills/yuque-publishing
 
 Then restart Codex.
 
-## Get a Yuque Token
+## Authentication Choices
+
+Choose one authentication mode before publishing:
+
+| Mode | Who should use it | Permission level | Notes |
+|---|---|---:|---|
+| Official OAuth / app authorization or Open API token | Users who can use Yuque's official developer auth, often paid or Super Member accounts | Scoped when Yuque supports scopes | Preferred and most stable. The included helper currently implements the Open API token path with `X-Auth-Token`. |
+| Browser session automation | Non-Super Member users who can log in in a browser but cannot create an API token | Same as the logged-in browser session | Safer fallback than extracting cookies. The automation should use an isolated browser profile and operate the Yuque UI without exporting cookies. |
+| Cookie/session extraction | Non-Super Member users who explicitly accept the risk | Maximum account-level permission | Highest risk. Cookies usually act like full login credentials. Use only as an explicit advanced fallback; never print, commit, or share session values. |
+
+This repository currently documents all three choices, but the shipped helper script implements only the Open API token mode. Browser-based modes should be added as separate explicit commands so users can opt in intentionally.
+
+## Get a Yuque Token or Official Auth
 
 Yuque Open API requires token authentication. The token is sent in the `X-Auth-Token` HTTP header. Official docs:
 
 - https://www.yuque.com/yuque/developer/api
 - https://www.yuque.com/yuque/developer/openapi
 
-To create a token:
+If your account can create tokens:
 
 1. Log in to Yuque.
 2. Open the token settings page: https://www.yuque.com/settings/tokens
@@ -53,6 +65,8 @@ To create a token:
 6. If a token is ever pasted into chat, logs, or a repository, revoke it and create a new one.
 
 Do not commit the token. Do not paste it into Codex chat.
+
+If your account cannot create a token, choose either Browser session automation or Cookie/session extraction from the authentication choices above. Prefer Browser session automation because it can avoid exporting raw session credentials.
 
 ## Configure Authentication
 
@@ -132,3 +146,5 @@ Directory mapping is documented in `skills/yuque-publishing/references/publishin
 - Tokens are redacted from helper-script error output.
 - `.env` files are ignored by this repository.
 - CI should inject `YUQUE_TOKEN` as a protected secret.
+- Cookie/session mode has the broadest permissions and should never be the default.
+- Browser session automation should use an isolated browser profile and should not export cookies unless the user explicitly asks for that risk.
