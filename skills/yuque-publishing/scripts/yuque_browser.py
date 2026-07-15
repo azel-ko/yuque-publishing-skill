@@ -11,15 +11,19 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import time
 from pathlib import Path
 from typing import Any
+from urllib.parse import unquote, urljoin
 
 
 DEFAULT_PROFILE_DIR = Path("~/.local/share/yuque-publishing/browser-profile").expanduser()
 DEFAULT_SPACE_URL = "https://www.yuque.com/azel/zob9yu"
 DEFAULT_LOGIN_URL = "https://www.yuque.com/login"
+DEFAULT_WEB_BASE_URL = "https://www.yuque.com"
+DEFAULT_CATALOG_ENDPOINT = "/api/docs/add_to_catalog"
 DEFAULT_BROWSER_PATHS = (
     "/usr/bin/google-chrome",
     "/usr/bin/google-chrome-stable",
@@ -122,6 +126,105 @@ def require_interactive_stdin(command: str) -> None:
             f"{command} requires an interactive terminal because it waits for manual browser steps. "
             "Run it from a terminal/TTY, or use cookie/session mode for programmatic creation."
         )
+
+
+def require_session_risk_ack(args: argparse.Namespace) -> None:
+    if not args.i_understand_session_risk:
+        raise YuqueBrowserError(
+            "session-backed internal web API calls use the full logged-in Yuque account permission. "
+            "Pass --i-understand-session-risk to execute."
+        )
+
+
+def cookie_value(context: Any, name: str) -> str | None:
+    for cookie in context.cookies(DEFAULT_WEB_BASE_URL):
+        if cookie.get("name") == name:
+            value = cookie.get("value")
+            return str(value) if value else None
+    return None
+
+
+def parse_app_data(html: str) -> dict[str, Any] | None:
+    match = re.search(r'window\.appData = JSON\.parse\(decodeURIComponent\("([\s\S]*?)"\)\);', html)
+    if not match:
+        return None
+    try:
+        return json.loads(unquote(match.group(1)))
+    except json.JSONDecodeError:
+        return None
+
+
+def extract_book_id(app_data: dict[str, Any] | None) -> int | None:
+    if not isinstance(app_data, dict):
+        return None
+    book = app_data.get("book")
+    if isinstance(book, dict) and isinstance(book.get("id"), int):
+        return int(book["id"])
+    return None
+
+
+def safe_response_summary(response: Any, text: str) -> dict[str, Any]:
+    result: dict[str, Any] = {
+        "status": response.status,
+        "ok": response.ok,
+        "url": response.url,
+    }
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError:
+        result["body_preview"] = text[:1000]
+        return result
+    if isinstance(payload, dict):
+        node = payload.get("data", payload)
+        summary: dict[str, Any] = {}
+        if isinstance(node, dict):
+            for key in ("id", "doc_id", "title", "slug", "book_id", "url", "uuid", "target_node_uuid"):
+                if key in node:
+                    summary[key] = node[key]
+        result["data"] = summary or {"keys": sorted(str(k) for k in payload.keys())[:20]}
+    return result
+
+
+def session_headers(context: Any, login: str | None = None) -> dict[str, str]:
+    headers = {
+        "accept": "application/json",
+        "content-type": "application/json",
+        "x-requested-with": "XMLHttpRequest",
+    }
+    csrf = cookie_value(context, "yuque_ctoken")
+    if csrf:
+        headers["x-csrf-token"] = csrf
+    if login:
+        headers["x-login"] = login
+    return headers
+
+
+def build_catalog_payload(args: argparse.Namespace, book_id: int | None) -> dict[str, Any]:
+    if book_id is None:
+        raise YuqueBrowserError("book id is required; pass --book-id or use a readable --space-url")
+    return {
+        "ids": list(args.doc_id),
+        "book_id": book_id,
+        "target_node_uuid": args.target_node_uuid or None,
+        "action": args.catalog_action,
+    }
+
+
+def session_post_json(
+    context: Any,
+    *,
+    base_url: str,
+    endpoint: str,
+    payload: dict[str, Any],
+    login: str | None = None,
+) -> dict[str, Any]:
+    url = urljoin(base_url.rstrip("/") + "/", endpoint.lstrip("/"))
+    response = context.request.post(
+        url,
+        headers=session_headers(context, login),
+        data=json.dumps(payload, ensure_ascii=False),
+    )
+    return safe_response_summary(response, response.text())
 
 
 def command_login(args: argparse.Namespace) -> int:
@@ -234,6 +337,52 @@ def command_create_doc(args: argparse.Namespace) -> int:
     return 0
 
 
+def command_add_to_catalog(args: argparse.Namespace) -> int:
+    path = profile_dir(args.profile_dir)
+    plan = {
+        "mode": "browser-session",
+        "dry_run": not args.execute,
+        "profile_dir": str(path),
+        "space_url": args.space_url,
+        "endpoint": args.endpoint,
+        "book_id": args.book_id or "auto-detect from --space-url",
+        "doc_ids": args.doc_id,
+        "target_node_uuid": args.target_node_uuid,
+        "action": args.catalog_action,
+        "headless": args.headless,
+        "exports_cookies": False,
+        "requires_risk_ack": True,
+        "internal_web_api": True,
+        "yuque_permission": "full logged-in account permissions",
+        "local_exposure": "dedicated skill browser profile only; session values are used programmatically",
+    }
+    if not args.execute:
+        print_json(plan)
+        return 0
+    require_session_risk_ack(args)
+    if not path.exists():
+        raise YuqueBrowserError(f"profile does not exist: {path}. Run login first.")
+
+    sync_playwright, _ = ensure_playwright()
+    with sync_playwright() as p:
+        context = launch_context(p, path, headless=args.headless)
+        page = context.pages[0] if context.pages else context.new_page()
+        page.goto(args.space_url, wait_until="domcontentloaded", timeout=args.timeout_ms)
+        app_data = parse_app_data(page.content())
+        book_id = args.book_id or extract_book_id(app_data)
+        payload = build_catalog_payload(args, book_id)
+        summary = session_post_json(
+            context,
+            base_url=args.base_url,
+            endpoint=args.endpoint,
+            payload=payload,
+            login=args.login,
+        )
+        context.close()
+    print_json(summary)
+    return 0 if summary.get("ok") else 1
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Yuque browser-session helper")
     parser.add_argument(
@@ -272,6 +421,39 @@ def build_parser() -> argparse.ArgumentParser:
     )
     create.add_argument("--auto-paste", action="store_true", help="press Ctrl+V after clipboard write")
     create.set_defaults(func=command_create_doc)
+
+    catalog = subparsers.add_parser(
+        "add-to-catalog",
+        help="add existing documents to the Yuque left catalog through the logged-in browser session",
+    )
+    catalog.add_argument("--space-url", default=DEFAULT_SPACE_URL)
+    catalog.add_argument("--base-url", default=DEFAULT_WEB_BASE_URL)
+    catalog.add_argument("--endpoint", default=DEFAULT_CATALOG_ENDPOINT)
+    catalog.add_argument("--book-id", type=int, help="Yuque book id; auto-detected from --space-url when possible")
+    catalog.add_argument("--login", help="optional Yuque login value for x-login header")
+    catalog.add_argument("--doc-id", action="append", type=int, required=True, help="Yuque document id to add")
+    catalog.add_argument(
+        "--target-node-uuid",
+        help="catalog node UUID to insert under or near; omit to use Yuque's root/default location",
+    )
+    catalog.add_argument(
+        "--catalog-action",
+        default="prependChild",
+        help="Yuque internal catalog action, e.g. prependChild (default)",
+    )
+    catalog.add_argument(
+        "--headless",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="run without opening a browser window (default); pass --no-headless for debugging",
+    )
+    catalog.add_argument("--execute", action="store_true", help="perform the session-backed internal web request")
+    catalog.add_argument(
+        "--i-understand-session-risk",
+        action="store_true",
+        help="required with --execute; browser session usually has full account permissions",
+    )
+    catalog.set_defaults(func=command_add_to_catalog)
 
     return parser
 

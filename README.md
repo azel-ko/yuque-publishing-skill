@@ -13,6 +13,7 @@ Codex and Claude Code skill for preparing, dry-running, publishing, and updating
 - Turns drafts, notes, and technical articles into structured Yuque pages.
 - Uses Yuque Open API with `X-Auth-Token` authentication.
 - Supports browser-session and explicit cookie/session fallback modes for users who cannot create API tokens.
+- Can add documents to the Yuque left catalog/sidebar in browser-session and cookie/session modes through Yuque's internal web API.
 - Keeps credentials out of the repository and out of skill files.
 - Runs write operations as dry-runs by default.
 - Requires explicit `--execute` before creating or updating Yuque documents.
@@ -112,8 +113,8 @@ Choose one authentication mode before publishing:
 | Mode | Who should use it | Permission level | Notes |
 |---|---|---:|---|
 | Official OAuth / app authorization or Open API token | Users who can use Yuque's official developer auth, often paid or Super Member accounts | Scoped when Yuque supports scopes | Preferred and most stable. The included helper currently implements the Open API token path with `X-Auth-Token`. |
-| Browser session automation | Non-Super Member users who can log in in a browser and accept a visible guided UI flow | Same as the logged-in browser session | Uses an isolated browser profile and operates the Yuque UI without exporting cookies. Not intended for silent background publishing. |
-| Cookie/session background publishing | Non-Super Member users who explicitly accept the risk and want silent writes after login | Maximum account-level permission | Highest risk. Session credentials usually act like full login credentials. Uses only the isolated skill profile, runs create/preflight headless by default, and requires `--i-understand-session-risk` for live writes. |
+| Browser session automation | Non-Super Member users who can log in in a browser and accept a visible guided UI flow | Same as the logged-in browser session | Uses an isolated browser profile and operates the Yuque UI without exporting cookies. It can also call Yuque's internal catalog API after login. |
+| Cookie/session background publishing | Non-Super Member users who explicitly accept the risk and want silent writes after login | Maximum account-level permission | Highest risk. Session credentials usually act like full login credentials. Uses only the isolated skill profile, runs create/preflight headless by default, and requires `--i-understand-session-risk` for live writes. It can create documents and add them to the left catalog through Yuque's internal web API. |
 
 The repository ships separate helpers for each path:
 
@@ -240,6 +241,8 @@ python3 ~/.codex/skills/yuque-publishing/scripts/yuque_publish.py \
   --execute
 ```
 
+Open API token mode intentionally stays on Yuque's documented Open API path. The current helper does not use private web routes in token mode, and the public Open API surface used here has no confirmed supported endpoint for placing a document into the left catalog/sidebar. If a token-created document does not appear in the left catalog, place it manually in Yuque or use the browser-session/cookie-session `add-to-catalog` command after explicitly accepting the internal web API risk.
+
 ## Browser Session Usage
 
 Use this mode when you cannot create a Yuque API token but can log in in a browser.
@@ -275,6 +278,27 @@ python3 ~/.codex/skills/yuque-publishing/scripts/yuque_browser.py create-doc \
 ```
 
 The script opens Yuque, asks you to create/open a blank editor, then fills the title and body. You still review and save/publish in the browser.
+
+After login, browser-session mode can also add an existing document id to the left catalog without exporting cookies. This uses Yuque's internal web API (`/api/docs/add_to_catalog`), not the official Open API, so it may change when Yuque changes its frontend:
+
+```bash
+python3 ~/.codex/skills/yuque-publishing/scripts/yuque_browser.py add-to-catalog \
+  --space-url https://www.yuque.com/azel/zob9yu \
+  --doc-id 123456
+```
+
+Execute only after inspecting the dry-run:
+
+```bash
+python3 ~/.codex/skills/yuque-publishing/scripts/yuque_browser.py add-to-catalog \
+  --space-url https://www.yuque.com/azel/zob9yu \
+  --doc-id 123456 \
+  --headless \
+  --execute \
+  --i-understand-session-risk
+```
+
+By default the command uses `action=prependChild` and `target_node_uuid=null`, which asks Yuque to insert the document into the default/root catalog location. Pass `--target-node-uuid` only after you have identified the intended catalog node.
 
 ## Cookie/Session Usage
 
@@ -320,7 +344,40 @@ python3 ~/.codex/skills/yuque-publishing/scripts/yuque_session.py create-doc \
   --i-understand-session-risk
 ```
 
-The default session endpoint is `/api/docs`. It is a Yuque web endpoint and may change; use `--endpoint` and `--book-id` if needed.
+Create and add the new document to the left catalog in one session flow:
+
+```bash
+python3 ~/.codex/skills/yuque-publishing/scripts/yuque_session.py create-doc \
+  --space-url https://www.yuque.com/azel/zob9yu \
+  --title "Article Title" \
+  --slug article-title \
+  --file article.md \
+  --add-to-catalog \
+  --headless \
+  --execute \
+  --i-understand-session-risk
+```
+
+Add an existing document id to the left catalog:
+
+```bash
+python3 ~/.codex/skills/yuque-publishing/scripts/yuque_session.py add-to-catalog \
+  --space-url https://www.yuque.com/azel/zob9yu \
+  --doc-id 123456
+```
+
+Then execute after inspecting the dry-run:
+
+```bash
+python3 ~/.codex/skills/yuque-publishing/scripts/yuque_session.py add-to-catalog \
+  --space-url https://www.yuque.com/azel/zob9yu \
+  --doc-id 123456 \
+  --headless \
+  --execute \
+  --i-understand-session-risk
+```
+
+The default document endpoint is `/api/docs`; the default catalog endpoint is `/api/docs/add_to_catalog`. Both are Yuque web endpoints and may change; use `--endpoint`, `--catalog-endpoint`, and `--book-id` if needed.
 
 ## Default Destination
 
@@ -343,4 +400,5 @@ Directory mapping is documented in `skills/yuque-publishing/references/publishin
 - Cookie/session mode has the broadest permissions and should never be the default.
 - Dedicated browser profiles do not reduce Yuque account permissions; they only reduce local exposure compared with reading your main browser profile.
 - Browser session automation should use an isolated browser profile and should not export cookies unless the user explicitly asks for that risk.
+- Catalog insertion uses Yuque's internal web endpoint in session modes only; it is not a guaranteed official Open API feature.
 - The default isolated browser profile is `~/.local/share/yuque-publishing/browser-profile`.

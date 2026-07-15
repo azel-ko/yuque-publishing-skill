@@ -14,8 +14,8 @@ Let the user choose one mode before publishing:
 | Mode | Intended users | Permission level | Implementation rule |
 |---|---|---:|---|
 | Official OAuth / app authorization or Open API token | Users who can use Yuque developer auth, often paid or Super Member accounts | Prefer scoped credentials when available | Use official APIs. The current helper supports `X-Auth-Token`. |
-| Browser session automation | Non-Super Member users who can log in through the browser and accept a visible guided UI flow | Same as browser login | Use an isolated browser profile and UI automation. Do not export cookies by default. Not intended for silent background publishing. |
-| Cookie/session background publishing | Non-Super Member users who explicitly accept the risk and want silent writes after login | Maximum account-level permission | Treat as full account credentials. Run create/preflight headless by default, never print values, and require explicit consent each time. |
+| Browser session automation | Non-Super Member users who can log in through the browser and accept a visible guided UI flow | Same as browser login | Use an isolated browser profile and UI automation. Do not export cookies by default. It may call Yuque's internal catalog API only after login and dry-run. |
+| Cookie/session background publishing | Non-Super Member users who explicitly accept the risk and want silent writes after login | Maximum account-level permission | Treat as full account credentials. Run create/preflight headless by default, never print values, and require explicit consent each time. It may call Yuque's internal catalog API when the user explicitly chooses this route. |
 
 If official OAuth docs are available, prefer OAuth/app authorization over raw tokens. If official OAuth is not available, the Open API token mode remains the stable API path.
 
@@ -40,8 +40,9 @@ The helper script reads:
 - Never commit, persist, or generate token files.
 - Never add tokens to `SKILL.md`, references, examples, README files, shell history snippets, or test fixtures.
 - Never print tokens. Redact tokens in errors and logs.
-- Avoid browser cookies and private web endpoints for default open-source automation.
+- Avoid browser cookies and private web endpoints for default Open API token automation.
 - Prefer official Open API endpoints over scraped web routes.
+- Use Yuque internal web endpoints only in browser-session or cookie/session mode, after dry-run, with explicit `--execute` and session-risk acknowledgement.
 - Ask the user to rotate any token pasted into chat before using it.
 - Treat external publishing as a side effect: confirm target namespace, title, and create/update intent before passing `--execute`.
 - When the user explicitly chooses cookie/session mode, state that it has the broadest permissions and must be handled like a password.
@@ -122,6 +123,7 @@ Browser-session flow:
 python3 scripts/yuque_browser.py login --space-url https://www.yuque.com/azel/zob9yu
 python3 scripts/yuque_browser.py create-doc --space-url https://www.yuque.com/azel/zob9yu --title "Title" --file article.md
 python3 scripts/yuque_browser.py create-doc --space-url https://www.yuque.com/azel/zob9yu --title "Title" --file article.md --execute
+python3 scripts/yuque_browser.py add-to-catalog --space-url https://www.yuque.com/azel/zob9yu --doc-id 123456
 ```
 
 Cookie/session flow:
@@ -131,6 +133,8 @@ python3 scripts/yuque_session.py login --space-url https://www.yuque.com/azel/zo
 python3 scripts/yuque_session.py preflight --space-url https://www.yuque.com/azel/zob9yu --headless
 python3 scripts/yuque_session.py create-doc --space-url https://www.yuque.com/azel/zob9yu --title "Title" --file article.md
 python3 scripts/yuque_session.py create-doc --space-url https://www.yuque.com/azel/zob9yu --title "Title" --file article.md --headless --execute --i-understand-session-risk
+python3 scripts/yuque_session.py create-doc --space-url https://www.yuque.com/azel/zob9yu --title "Title" --file article.md --add-to-catalog --headless --execute --i-understand-session-risk
+python3 scripts/yuque_session.py add-to-catalog --space-url https://www.yuque.com/azel/zob9yu --doc-id 123456
 ```
 
-The cookie/session helper defaults to `/api/docs`, a Yuque web endpoint that may change. If Yuque changes it, pass `--endpoint` and `--book-id` explicitly after validating the current web request shape.
+The cookie/session helper defaults to `/api/docs` for document creation and `/api/docs/add_to_catalog` for catalog insertion. These are Yuque web endpoints that may change. If Yuque changes them, pass `--endpoint`, `--catalog-endpoint`, and `--book-id` explicitly after validating the current web request shape.

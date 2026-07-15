@@ -22,6 +22,7 @@ DEFAULT_PROFILE_DIR = Path("~/.local/share/yuque-publishing/browser-profile").ex
 DEFAULT_SPACE_URL = "https://www.yuque.com/azel/zob9yu"
 DEFAULT_WEB_BASE_URL = "https://www.yuque.com"
 DEFAULT_DOC_ENDPOINT = "/api/docs"
+DEFAULT_CATALOG_ENDPOINT = "/api/docs/add_to_catalog"
 DEFAULT_BROWSER_PATHS = (
     "/usr/bin/google-chrome",
     "/usr/bin/google-chrome-stable",
@@ -156,11 +157,46 @@ def safe_response_summary(response: Any, text: str) -> dict[str, Any]:
         node = payload.get("data", payload)
         summary: dict[str, Any] = {}
         if isinstance(node, dict):
-            for key in ("id", "title", "slug", "login", "name", "book_id", "url"):
+            for key in (
+                "id",
+                "doc_id",
+                "title",
+                "slug",
+                "login",
+                "name",
+                "book_id",
+                "url",
+                "uuid",
+                "target_node_uuid",
+            ):
                 if key in node:
                     summary[key] = node[key]
         result["data"] = summary or {"keys": sorted(str(k) for k in payload.keys())[:20]}
     return result
+
+
+def response_data(text: str) -> dict[str, Any] | None:
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(payload, dict):
+        return None
+    node = payload.get("data", payload)
+    return node if isinstance(node, dict) else None
+
+
+def response_doc_id(text: str) -> int | None:
+    node = response_data(text)
+    if not node:
+        return None
+    for key in ("id", "doc_id"):
+        value = node.get(key)
+        if isinstance(value, int):
+            return value
+        if isinstance(value, str) and value.isdigit():
+            return int(value)
+    return None
 
 
 def parse_app_data(html: str) -> dict[str, Any] | None:
@@ -182,6 +218,38 @@ def extract_book_id(app_data: dict[str, Any] | None) -> int | None:
     if isinstance(book, dict) and isinstance(book.get("id"), int):
         return int(book["id"])
     return None
+
+
+def session_headers(context: Any, login: str | None = None) -> dict[str, str]:
+    headers = {
+        "accept": "application/json",
+        "content-type": "application/json",
+        "x-requested-with": "XMLHttpRequest",
+    }
+    csrf = cookie_value(context, "yuque_ctoken")
+    if csrf:
+        headers["x-csrf-token"] = csrf
+    if login:
+        headers["x-login"] = login
+    return headers
+
+
+def session_post_json(
+    context: Any,
+    *,
+    base_url: str,
+    endpoint: str,
+    payload: dict[str, Any],
+    login: str | None = None,
+) -> tuple[dict[str, Any], str]:
+    url = urljoin(base_url.rstrip("/") + "/", endpoint.lstrip("/"))
+    response = context.request.post(
+        url,
+        headers=session_headers(context, login),
+        data=json.dumps(payload, ensure_ascii=False),
+    )
+    text = response.text()
+    return safe_response_summary(response, text), text
 
 
 def command_login(args: argparse.Namespace) -> int:
@@ -254,6 +322,24 @@ def build_doc_payload(args: argparse.Namespace, book_id: int | None) -> dict[str
     return payload
 
 
+def build_catalog_payload(
+    args: argparse.Namespace,
+    book_id: int | None,
+    doc_ids: list[int] | None = None,
+) -> dict[str, Any]:
+    if book_id is None:
+        raise YuqueSessionError("book id is required; pass --book-id or use a readable --space-url")
+    ids = doc_ids if doc_ids is not None else list(args.doc_id)
+    if not ids:
+        raise YuqueSessionError("at least one --doc-id is required")
+    return {
+        "ids": ids,
+        "book_id": book_id,
+        "target_node_uuid": args.target_node_uuid or None,
+        "action": args.catalog_action,
+    }
+
+
 def command_create_doc(args: argparse.Namespace) -> int:
     path = profile_dir(args.profile_dir)
     body = load_body(args.file)
@@ -270,6 +356,89 @@ def command_create_doc(args: argparse.Namespace) -> int:
         "body_chars": len(body),
         "exports_cookies": False,
         "requires_risk_ack": True,
+        "internal_web_api": True,
+        "yuque_permission": "full logged-in account permissions",
+        "local_exposure": "dedicated skill browser profile only; session values are used programmatically",
+    }
+    if args.add_to_catalog:
+        dry_run_plan["catalog"] = {
+            "endpoint": args.catalog_endpoint,
+            "book_id": args.book_id or "auto-detect from --space-url",
+            "target_node_uuid": args.target_node_uuid,
+            "action": args.catalog_action,
+            "doc_id_source": "created document response",
+            "internal_web_api": True,
+        }
+    if not args.execute:
+        print_json(dry_run_plan)
+        return 0
+    require_risk_ack(args)
+    if not path.exists():
+        raise YuqueSessionError(f"profile does not exist: {path}. Run login first.")
+
+    sync_playwright = ensure_playwright()
+    with sync_playwright() as p:
+        context = launch_context(p, path, headless=args.headless)
+        page = context.pages[0] if context.pages else context.new_page()
+        page.goto(args.space_url, wait_until="domcontentloaded", timeout=args.timeout_ms)
+        app_data = parse_app_data(page.content())
+        book_id = args.book_id or extract_book_id(app_data)
+        payload = build_doc_payload(args, book_id)
+        summary, text = session_post_json(
+            context,
+            base_url=args.base_url,
+            endpoint=args.endpoint,
+            payload=payload,
+            login=args.login,
+        )
+        if args.add_to_catalog:
+            result = {"create": summary}
+            if summary.get("ok"):
+                doc_id = response_doc_id(text)
+                if doc_id is None:
+                    context.close()
+                    print_json(
+                        {
+                            "create": summary,
+                            "catalog": {"ok": False, "error": "create response did not include a doc id"},
+                        }
+                    )
+                    return 1
+                catalog_payload = build_catalog_payload(args, book_id, [doc_id])
+                catalog_summary, _ = session_post_json(
+                    context,
+                    base_url=args.base_url,
+                    endpoint=args.catalog_endpoint,
+                    payload=catalog_payload,
+                    login=args.login,
+                )
+                result["catalog"] = catalog_summary
+            else:
+                result["catalog"] = {"ok": False, "skipped": "create request failed"}
+            summary = result
+        context.close()
+    print_json(summary)
+    if args.add_to_catalog:
+        return 0 if summary["create"].get("ok") and summary["catalog"].get("ok") else 1
+    return 0 if summary.get("ok") else 1
+
+
+def command_add_to_catalog(args: argparse.Namespace) -> int:
+    path = profile_dir(args.profile_dir)
+    dry_run_plan = {
+        "mode": "cookie-session",
+        "dry_run": not args.execute,
+        "profile_dir": str(path),
+        "space_url": args.space_url,
+        "endpoint": args.endpoint,
+        "book_id": args.book_id or "auto-detect from --space-url",
+        "doc_ids": args.doc_id,
+        "target_node_uuid": args.target_node_uuid,
+        "action": args.catalog_action,
+        "headless": args.headless,
+        "exports_cookies": False,
+        "requires_risk_ack": True,
+        "internal_web_api": True,
         "yuque_permission": "full logged-in account permissions",
         "local_exposure": "dedicated skill browser profile only; session values are used programmatically",
     }
@@ -287,22 +456,14 @@ def command_create_doc(args: argparse.Namespace) -> int:
         page.goto(args.space_url, wait_until="domcontentloaded", timeout=args.timeout_ms)
         app_data = parse_app_data(page.content())
         book_id = args.book_id or extract_book_id(app_data)
-        payload = build_doc_payload(args, book_id)
-        csrf = cookie_value(context, "yuque_ctoken")
-        headers = {
-            "accept": "application/json",
-            "content-type": "application/json",
-            "x-requested-with": "XMLHttpRequest",
-        }
-        if csrf:
-            headers["x-csrf-token"] = csrf
-        if args.login:
-            headers["x-login"] = args.login
-
-        url = urljoin(args.base_url.rstrip("/") + "/", args.endpoint.lstrip("/"))
-        response = context.request.post(url, headers=headers, data=json.dumps(payload, ensure_ascii=False))
-        text = response.text()
-        summary = safe_response_summary(response, text)
+        payload = build_catalog_payload(args, book_id)
+        summary, _ = session_post_json(
+            context,
+            base_url=args.base_url,
+            endpoint=args.endpoint,
+            payload=payload,
+            login=args.login,
+        )
         context.close()
     print_json(summary)
     return 0 if summary.get("ok") else 1
@@ -341,6 +502,7 @@ def build_parser() -> argparse.ArgumentParser:
     create.add_argument("--space-url", default=DEFAULT_SPACE_URL)
     create.add_argument("--base-url", default=DEFAULT_WEB_BASE_URL)
     create.add_argument("--endpoint", default=DEFAULT_DOC_ENDPOINT)
+    create.add_argument("--catalog-endpoint", default=DEFAULT_CATALOG_ENDPOINT)
     create.add_argument("--book-id", type=int, help="Yuque book id; auto-detected from --space-url when possible")
     create.add_argument("--login", help="optional Yuque login value for x-login header")
     create.add_argument("--title", required=True)
@@ -358,11 +520,58 @@ def build_parser() -> argparse.ArgumentParser:
     )
     create.add_argument("--execute", action="store_true", help="perform the session request")
     create.add_argument(
+        "--add-to-catalog",
+        action="store_true",
+        help="after creating the document, call Yuque's internal web API to add it to the left catalog",
+    )
+    create.add_argument(
+        "--target-node-uuid",
+        help="catalog node UUID to insert under or near; omit to use Yuque's root/default location",
+    )
+    create.add_argument(
+        "--catalog-action",
+        default="prependChild",
+        help="Yuque internal catalog action, e.g. prependChild (default)",
+    )
+    create.add_argument(
         "--i-understand-session-risk",
         action="store_true",
         help="required with --execute; session cookies usually have full account permissions",
     )
     create.set_defaults(func=command_create_doc)
+
+    catalog = subparsers.add_parser(
+        "add-to-catalog",
+        help="add existing documents to the Yuque left catalog through Yuque web session API",
+    )
+    catalog.add_argument("--space-url", default=DEFAULT_SPACE_URL)
+    catalog.add_argument("--base-url", default=DEFAULT_WEB_BASE_URL)
+    catalog.add_argument("--endpoint", default=DEFAULT_CATALOG_ENDPOINT)
+    catalog.add_argument("--book-id", type=int, help="Yuque book id; auto-detected from --space-url when possible")
+    catalog.add_argument("--login", help="optional Yuque login value for x-login header")
+    catalog.add_argument("--doc-id", action="append", type=int, required=True, help="Yuque document id to add")
+    catalog.add_argument(
+        "--target-node-uuid",
+        help="catalog node UUID to insert under or near; omit to use Yuque's root/default location",
+    )
+    catalog.add_argument(
+        "--catalog-action",
+        default="prependChild",
+        help="Yuque internal catalog action, e.g. prependChild (default)",
+    )
+    catalog.add_argument(
+        "--headless",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="run without opening a browser window (default); pass --no-headless for debugging",
+    )
+    catalog.add_argument("--execute", action="store_true", help="perform the session request")
+    catalog.add_argument(
+        "--i-understand-session-risk",
+        action="store_true",
+        help="required with --execute; session cookies usually have full account permissions",
+    )
+    catalog.set_defaults(func=command_add_to_catalog)
 
     return parser
 

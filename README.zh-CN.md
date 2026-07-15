@@ -13,6 +13,7 @@
 - 将草稿、笔记、技术文章整理成结构化语雀文档。
 - 使用语雀开放 API，通过 `X-Auth-Token` 认证。
 - 给不能生成 API Token 的用户提供浏览器会话和显式 Cookie/session fallback。
+- 在浏览器会话和 Cookie/session 模式下，可以通过语雀网页端内部接口把文档加入左侧目录。
 - 不在仓库或 skill 文件中保存真实凭证。
 - 写入操作默认 dry-run。
 - 只有显式传入 `--execute` 时才会创建或更新语雀文档。
@@ -112,8 +113,8 @@ cp -a skills/yuque-publishing/. .claude/skills/yuque-publishing/
 | 模式 | 适合谁 | 权限范围 | 说明 |
 |---|---|---:|---|
 | 官方 OAuth / 应用授权 或 Open API Token | 能使用语雀官方开发者认证的用户，通常是付费或超级会员账号 | 如果语雀支持 scope，则可控 | 首选，最稳定。当前 helper 脚本实现的是 `X-Auth-Token` 的 Open API Token 路径。 |
-| 浏览器会话自动化 | 不能生成 API Token、可以正常网页登录、并接受可视化引导式 UI 流程的非超级会员用户 | 等同当前网页登录态 | 使用隔离浏览器 profile，通过 UI 自动化操作语雀，不导出 cookie。不适合后台静默发布。 |
-| Cookie/session 后台发布 | 明确接受风险、并希望登录后静默写入的非超级会员用户 | 最大，通常等同完整账号登录权限 | 最高风险。Session 通常就是完整登录凭证。只使用 skill 的隔离 profile，创建和预检默认 headless，真实写入必须传 `--i-understand-session-risk`。 |
+| 浏览器会话自动化 | 不能生成 API Token、可以正常网页登录、并接受可视化引导式 UI 流程的非超级会员用户 | 等同当前网页登录态 | 使用隔离浏览器 profile，通过 UI 自动化操作语雀，不导出 cookie。登录后也可以调用语雀内部目录接口。 |
+| Cookie/session 后台发布 | 明确接受风险、并希望登录后静默写入的非超级会员用户 | 最大，通常等同完整账号登录权限 | 最高风险。Session 通常就是完整登录凭证。只使用 skill 的隔离 profile，创建和预检默认 headless，真实写入必须传 `--i-understand-session-risk`。可以通过语雀网页端内部接口创建文档并加入左侧目录。 |
 
 仓库按模式提供了独立脚本：
 
@@ -240,6 +241,8 @@ python3 ~/.codex/skills/yuque-publishing/scripts/yuque_publish.py \
   --execute
 ```
 
+Open API Token 模式会保守地只走语雀官方 Open API 路径。当前 helper 不会在 Token 模式下调用私有网页端接口；这里使用到的公开 Open API 能力里，也没有确认支持“把文档放入左侧目录/侧边栏”的稳定接口。如果 Token 创建的文档没有出现在左侧目录，需要在语雀里手动移动，或者在明确接受内部接口风险后，使用 browser-session / cookie-session 的 `add-to-catalog` 命令补目录。
+
 ## 浏览器会话使用示例
 
 当你不能创建语雀 API Token、但可以正常网页登录时，优先使用这个模式。
@@ -275,6 +278,27 @@ python3 ~/.codex/skills/yuque-publishing/scripts/yuque_browser.py create-doc \
 ```
 
 脚本会打开语雀，让你创建或打开空白编辑器，然后填入标题和正文。最终仍由你在浏览器里检查并保存/发布。
+
+登录后，browser-session 模式也可以在不导出 cookie 的情况下，把已有文档 id 加入左侧目录。这个能力使用语雀网页端内部接口 `/api/docs/add_to_catalog`，不是官方 Open API；语雀前端变化时它也可能变化：
+
+```bash
+python3 ~/.codex/skills/yuque-publishing/scripts/yuque_browser.py add-to-catalog \
+  --space-url https://www.yuque.com/azel/zob9yu \
+  --doc-id 123456
+```
+
+确认 dry-run 后再执行：
+
+```bash
+python3 ~/.codex/skills/yuque-publishing/scripts/yuque_browser.py add-to-catalog \
+  --space-url https://www.yuque.com/azel/zob9yu \
+  --doc-id 123456 \
+  --headless \
+  --execute \
+  --i-understand-session-risk
+```
+
+默认使用 `action=prependChild` 和 `target_node_uuid=null`，让语雀插入到默认/根目录位置。只有在已经确认目标目录节点 UUID 后，才传 `--target-node-uuid`。
 
 ## Cookie/session 使用示例
 
@@ -320,7 +344,40 @@ python3 ~/.codex/skills/yuque-publishing/scripts/yuque_session.py create-doc \
   --i-understand-session-risk
 ```
 
-默认 session endpoint 是 `/api/docs`。这是语雀网页端接口，可能随前端变化；必要时用 `--endpoint` 和 `--book-id` 覆盖。
+在同一个 session 流程里创建文档并加入左侧目录：
+
+```bash
+python3 ~/.codex/skills/yuque-publishing/scripts/yuque_session.py create-doc \
+  --space-url https://www.yuque.com/azel/zob9yu \
+  --title "文章标题" \
+  --slug article-title \
+  --file article.md \
+  --add-to-catalog \
+  --headless \
+  --execute \
+  --i-understand-session-risk
+```
+
+把已有文档 id 加入左侧目录：
+
+```bash
+python3 ~/.codex/skills/yuque-publishing/scripts/yuque_session.py add-to-catalog \
+  --space-url https://www.yuque.com/azel/zob9yu \
+  --doc-id 123456
+```
+
+确认 dry-run 后再执行：
+
+```bash
+python3 ~/.codex/skills/yuque-publishing/scripts/yuque_session.py add-to-catalog \
+  --space-url https://www.yuque.com/azel/zob9yu \
+  --doc-id 123456 \
+  --headless \
+  --execute \
+  --i-understand-session-risk
+```
+
+默认文档 endpoint 是 `/api/docs`，默认目录 endpoint 是 `/api/docs/add_to_catalog`。它们都是语雀网页端接口，可能随前端变化；必要时用 `--endpoint`、`--catalog-endpoint` 和 `--book-id` 覆盖。
 
 ## 默认发布目标
 
@@ -343,4 +400,5 @@ skill 内置了 Azel 的默认语雀发布偏好：
 - Cookie/session 模式权限最大，不能作为默认模式。
 - 专用浏览器 profile 不降低语雀账号权限，只是相比读取主浏览器 profile 降低本机暴露范围。
 - 浏览器会话自动化应使用隔离浏览器 profile；除非用户明确接受风险，否则不要导出 cookie。
+- 左侧目录写入只在 session 模式下使用语雀网页端内部接口，不是官方 Open API 的稳定保证能力。
 - 默认隔离浏览器 profile 是 `~/.local/share/yuque-publishing/browser-profile`。

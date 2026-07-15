@@ -47,7 +47,7 @@ Clarify only what blocks a safe publish:
 - Title, slug, directory, visibility, and source material.
 - Whether the user expects a final live publish now or only a prepared payload.
 
-If directory placement cannot be controlled by the confirmed API path, publish to the correct knowledge base and state that catalog placement remains manual or requires a separate supported API step.
+Open API token mode does not have a confirmed supported catalog-placement endpoint. If the user needs the page to appear in the Yuque left catalog/sidebar, use browser-session or cookie/session catalog commands only after the user accepts the internal web API and session-permission risk.
 
 ### 2. Prepare content
 
@@ -89,6 +89,7 @@ Browser-session helper:
 ```bash
 python3 scripts/yuque_browser.py login --space-url https://www.yuque.com/azel/zob9yu
 python3 scripts/yuque_browser.py create-doc --space-url https://www.yuque.com/azel/zob9yu --title "Article Title" --file article.md
+python3 scripts/yuque_browser.py add-to-catalog --space-url https://www.yuque.com/azel/zob9yu --doc-id 123456
 ```
 
 Use browser-session mode only when a visible guided UI flow is acceptable. For background publishing after the isolated profile is logged in, use the cookie/session helper in headless mode instead.
@@ -100,7 +101,11 @@ python3 scripts/yuque_session.py login --space-url https://www.yuque.com/azel/zo
 python3 scripts/yuque_session.py preflight --space-url https://www.yuque.com/azel/zob9yu --headless
 python3 scripts/yuque_session.py create-doc --space-url https://www.yuque.com/azel/zob9yu --title "Article Title" --file article.md
 python3 scripts/yuque_session.py create-doc --space-url https://www.yuque.com/azel/zob9yu --title "Article Title" --file article.md --headless --execute --i-understand-session-risk
+python3 scripts/yuque_session.py create-doc --space-url https://www.yuque.com/azel/zob9yu --title "Article Title" --file article.md --add-to-catalog --headless --execute --i-understand-session-risk
+python3 scripts/yuque_session.py add-to-catalog --space-url https://www.yuque.com/azel/zob9yu --doc-id 123456
 ```
+
+The catalog commands use Yuque's internal web endpoint `/api/docs/add_to_catalog`. They are not official Open API calls, may change with Yuque's frontend, and must stay dry-run first.
 
 ### 4. Dry-run first
 
