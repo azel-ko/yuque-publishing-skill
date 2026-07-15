@@ -18,21 +18,27 @@ DEFAULT_SKILL_DIR = Path(__file__).resolve().parents[1]
 MODES = {
     "token": {
         "label": "Open API Token",
+        "recommended": False,
+        "recommendation": "Official and stable route, but not the most complete feature set.",
         "yuque_permission": "Depends on the token; prefer least privilege.",
         "local_exposure": "Only the token value is exposed to the runtime environment.",
-        "best_for": "Users who can create a Yuque Open API token or use official app auth.",
+        "best_for": "Users who can create a Yuque Open API token or use official app auth and only need documented Open API behavior.",
     },
     "browser": {
         "label": "Browser session automation",
+        "recommended": False,
+        "recommendation": "Use when you want a visible guided browser flow instead of headless/background publishing.",
         "yuque_permission": "Full permissions of the logged-in Yuque account.",
         "local_exposure": "Only the dedicated skill browser profile is exposed.",
         "best_for": "Users who cannot create a token and are willing to use a visible guided Yuque browser window.",
     },
     "session": {
         "label": "Cookie/session background publishing",
+        "recommended": True,
+        "recommendation": "Recommended for the most complete feature set: headless/background publishing plus catalog insertion.",
         "yuque_permission": "Full permissions of the logged-in Yuque account.",
         "local_exposure": "Only the dedicated skill browser profile is exposed, but session values are used programmatically.",
-        "best_for": "Background/headless publishing after the isolated browser profile is already logged in.",
+        "best_for": "Background/headless publishing and catalog insertion after the isolated browser profile is already logged in.",
     },
 }
 
@@ -96,12 +102,13 @@ def session_commands(args: argparse.Namespace) -> list[str]:
         f"{session} preflight --space-url {quote_shell(args.space_url)} --headless",
         (
             f"{session} create-doc "
-            f"--space-url {quote_shell(args.space_url)} --title {quote_shell(title)} --file {quote_shell(file_arg)}"
+            f"--space-url {quote_shell(args.space_url)} --title {quote_shell(title)} --file {quote_shell(file_arg)} "
+            "--add-to-catalog"
         ),
         (
             f"{session} create-doc "
             f"--space-url {quote_shell(args.space_url)} --title {quote_shell(title)} --file {quote_shell(file_arg)} "
-            "--headless --execute --i-understand-session-risk"
+            "--add-to-catalog --headless --execute --i-understand-session-risk"
         ),
     ]
 
@@ -116,7 +123,7 @@ def select_mode_interactively() -> str:
     print("Choose Yuque authentication mode:")
     print("1. Open API Token / official auth")
     print("2. Browser session automation")
-    print("3. Cookie/session fallback")
+    print("3. Cookie/session fallback [Recommended: full feature set]")
     while True:
         choice = input("Enter 1, 2, or 3: ").strip()
         if choice == "1":
@@ -138,6 +145,8 @@ def command_select(args: argparse.Namespace) -> int:
     result = {
         "mode": mode,
         "label": MODES[mode]["label"],
+        "recommended": MODES[mode]["recommended"],
+        "recommendation": MODES[mode]["recommendation"],
         "best_for": MODES[mode]["best_for"],
         "yuque_permission": MODES[mode]["yuque_permission"],
         "local_exposure": MODES[mode]["local_exposure"],
@@ -156,7 +165,9 @@ def command_select(args: argparse.Namespace) -> int:
     if args.json:
         print_json(result)
         return 0
-    print(f"Selected: {result['label']}")
+    selected_marker = " [Recommended]" if result["recommended"] else ""
+    print(f"Selected: {result['label']}{selected_marker}")
+    print(f"Recommendation: {result['recommendation']}")
     print(f"Best for: {result['best_for']}")
     print(f"Yuque permission: {result['yuque_permission']}")
     print(f"Local exposure: {result['local_exposure']}")

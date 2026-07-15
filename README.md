@@ -13,6 +13,7 @@ Codex and Claude Code skill for preparing, dry-running, publishing, and updating
 - Turns drafts, notes, and technical articles into structured Yuque pages.
 - Uses Yuque Open API with `X-Auth-Token` authentication.
 - Supports browser-session and explicit cookie/session fallback modes for users who cannot create API tokens.
+- Recommends cookie/session mode for the most complete current feature set.
 - Can add documents to the Yuque left catalog/sidebar in browser-session and cookie/session modes through Yuque's internal web API.
 - Keeps credentials out of the repository and out of skill files.
 - Runs write operations as dry-runs by default.
@@ -108,13 +109,13 @@ cp -a skills/yuque-publishing/. .claude/skills/yuque-publishing/
 
 ## Authentication Choices
 
-Choose one authentication mode before publishing:
+Choose one authentication mode before publishing. Current feature recommendation: choose cookie/session mode when you need the most complete workflow, including headless/background publishing and left-catalog insertion. Choose Open API Token when you want the most conservative official route and can accept the current catalog-placement limitation.
 
 | Mode | Who should use it | Permission level | Notes |
 |---|---|---:|---|
-| Official OAuth / app authorization or Open API token | Users who can use Yuque's official developer auth, often paid or Super Member accounts | Scoped when Yuque supports scopes | Preferred and most stable. The included helper currently implements the Open API token path with `X-Auth-Token`. |
+| Official OAuth / app authorization or Open API token | Users who can use Yuque's official developer auth, often paid or Super Member accounts | Scoped when Yuque supports scopes | Official and stable, but currently not the most complete route because catalog placement is not confirmed in the public Open API path used here. |
 | Browser session automation | Non-Super Member users who can log in in a browser and accept a visible guided UI flow | Same as the logged-in browser session | Uses an isolated browser profile and operates the Yuque UI without exporting cookies. It can also call Yuque's internal catalog API after login. |
-| Cookie/session background publishing | Non-Super Member users who explicitly accept the risk and want silent writes after login | Maximum account-level permission | Highest risk. Session credentials usually act like full login credentials. Uses only the isolated skill profile, runs create/preflight headless by default, and requires `--i-understand-session-risk` for live writes. It can create documents and add them to the left catalog through Yuque's internal web API. |
+| Cookie/session background publishing **(Recommended: full feature set)** | Non-Super Member users who explicitly accept the risk and want silent writes after login | Maximum account-level permission | Most complete current route: headless/background publishing plus left-catalog insertion. Highest risk: session credentials usually act like full login credentials. Uses only the isolated skill profile, runs create/preflight headless by default, and requires `--i-understand-session-risk` for live writes. |
 
 The repository ships separate helpers for each path:
 
@@ -133,7 +134,7 @@ Non-interactive example:
 
 ```bash
 python3 ~/.codex/skills/yuque-publishing/scripts/yuque_auth.py select \
-  --mode browser \
+  --mode session \
   --title "Article Title" \
   --file article.md
 ```
@@ -156,7 +157,7 @@ If your account can create tokens:
 
 Do not commit the token. Do not paste it into Codex or Claude Code chat.
 
-If your account cannot create a token, choose either Browser session automation or Cookie/session extraction from the authentication choices above. Prefer Browser session automation because it can avoid exporting raw session credentials.
+If your account cannot create a token, choose either Browser session automation or Cookie/session extraction from the authentication choices above. Cookie/session is the recommended route for the most complete current feature set; choose Browser session automation when you prefer a visible guided flow and do not need silent/headless publishing.
 
 ## Configure Authentication
 
@@ -397,7 +398,7 @@ Directory mapping is documented in `skills/yuque-publishing/references/publishin
 - Tokens are redacted from helper-script error output.
 - `.env` files are ignored by this repository.
 - CI should inject `YUQUE_TOKEN` as a protected secret.
-- Cookie/session mode has the broadest permissions and should never be the default.
+- Cookie/session mode has the broadest permissions. It is the recommended full-feature route, but it should never run live writes without explicit `--execute` and `--i-understand-session-risk`.
 - Dedicated browser profiles do not reduce Yuque account permissions; they only reduce local exposure compared with reading your main browser profile.
 - Browser session automation should use an isolated browser profile and should not export cookies unless the user explicitly asks for that risk.
 - Catalog insertion uses Yuque's internal web endpoint in session modes only; it is not a guaranteed official Open API feature.

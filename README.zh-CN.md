@@ -13,6 +13,7 @@
 - 将草稿、笔记、技术文章整理成结构化语雀文档。
 - 使用语雀开放 API，通过 `X-Auth-Token` 认证。
 - 给不能生成 API Token 的用户提供浏览器会话和显式 Cookie/session fallback。
+- 当前把 Cookie/session 标记为功能最全的推荐模式。
 - 在浏览器会话和 Cookie/session 模式下，可以通过语雀网页端内部接口把文档加入左侧目录。
 - 不在仓库或 skill 文件中保存真实凭证。
 - 写入操作默认 dry-run。
@@ -108,13 +109,13 @@ cp -a skills/yuque-publishing/. .claude/skills/yuque-publishing/
 
 ## 认证方式选择
 
-发布前先选择一种认证方式：
+发布前先选择一种认证方式。当前功能推荐：如果你需要最完整流程，包括后台/headless 写入和左侧目录写入，选择 Cookie/session；如果你只想走最保守的官方路线，并且可以接受当前目录写入限制，选择 Open API Token。
 
 | 模式 | 适合谁 | 权限范围 | 说明 |
 |---|---|---:|---|
-| 官方 OAuth / 应用授权 或 Open API Token | 能使用语雀官方开发者认证的用户，通常是付费或超级会员账号 | 如果语雀支持 scope，则可控 | 首选，最稳定。当前 helper 脚本实现的是 `X-Auth-Token` 的 Open API Token 路径。 |
+| 官方 OAuth / 应用授权 或 Open API Token | 能使用语雀官方开发者认证的用户，通常是付费或超级会员账号 | 如果语雀支持 scope，则可控 | 官方、稳定，但当前不是功能最全路线，因为这里使用的公开 Open API 路径没有确认支持左侧目录写入。 |
 | 浏览器会话自动化 | 不能生成 API Token、可以正常网页登录、并接受可视化引导式 UI 流程的非超级会员用户 | 等同当前网页登录态 | 使用隔离浏览器 profile，通过 UI 自动化操作语雀，不导出 cookie。登录后也可以调用语雀内部目录接口。 |
-| Cookie/session 后台发布 | 明确接受风险、并希望登录后静默写入的非超级会员用户 | 最大，通常等同完整账号登录权限 | 最高风险。Session 通常就是完整登录凭证。只使用 skill 的隔离 profile，创建和预检默认 headless，真实写入必须传 `--i-understand-session-risk`。可以通过语雀网页端内部接口创建文档并加入左侧目录。 |
+| Cookie/session 后台发布 **（推荐：功能最全）** | 明确接受风险、并希望登录后静默写入的非超级会员用户 | 最大，通常等同完整账号登录权限 | 当前功能最完整：支持后台/headless 写入和左侧目录写入。风险最高：session 通常就是完整登录凭证。只使用 skill 的隔离 profile，创建和预检默认 headless，真实写入必须传 `--i-understand-session-risk`。 |
 
 仓库按模式提供了独立脚本：
 
@@ -133,7 +134,7 @@ python3 ~/.codex/skills/yuque-publishing/scripts/yuque_auth.py select
 
 ```bash
 python3 ~/.codex/skills/yuque-publishing/scripts/yuque_auth.py select \
-  --mode browser \
+  --mode session \
   --title "文章标题" \
   --file article.md
 ```
@@ -156,7 +157,7 @@ python3 ~/.codex/skills/yuque-publishing/scripts/yuque_auth.py select \
 
 不要把 Token 提交到仓库，也不要把 Token 粘贴到 Codex 或 Claude Code 聊天里。
 
-如果你的账号不能创建 Token，就从上面的认证方式里选择“浏览器会话自动化”或“Cookie/session 提取”。优先选浏览器会话自动化，因为它可以避免导出原始 session 凭证。
+如果你的账号不能创建 Token，就从上面的认证方式里选择“浏览器会话自动化”或“Cookie/session 提取”。如果要功能最全，推荐 Cookie/session；如果更想要可视化引导流程、且不需要后台/headless 发布，再选浏览器会话自动化。
 
 ## 配置认证
 
@@ -397,7 +398,7 @@ skill 内置了 Azel 的默认语雀发布偏好：
 - helper 脚本会在错误输出里遮蔽 Token。
 - 仓库默认忽略 `.env` 文件。
 - CI 中应使用受保护的 Secret 注入 `YUQUE_TOKEN`。
-- Cookie/session 模式权限最大，不能作为默认模式。
+- Cookie/session 模式权限最大。它是当前功能最全的推荐路线，但真实写入必须显式传 `--execute` 和 `--i-understand-session-risk`。
 - 专用浏览器 profile 不降低语雀账号权限，只是相比读取主浏览器 profile 降低本机暴露范围。
 - 浏览器会话自动化应使用隔离浏览器 profile；除非用户明确接受风险，否则不要导出 cookie。
 - 左侧目录写入只在 session 模式下使用语雀网页端内部接口，不是官方 Open API 的稳定保证能力。

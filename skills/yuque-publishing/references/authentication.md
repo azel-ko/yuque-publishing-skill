@@ -9,15 +9,15 @@ Official source to re-check when behavior changes:
 
 ## Authentication modes
 
-Let the user choose one mode before publishing:
+Let the user choose one mode before publishing. Mark cookie/session as the recommended full-feature mode because it supports headless/background publishing and catalog insertion. Keep Open API token as the conservative official route when users prefer documented API behavior over completeness.
 
 | Mode | Intended users | Permission level | Implementation rule |
 |---|---|---:|---|
-| Official OAuth / app authorization or Open API token | Users who can use Yuque developer auth, often paid or Super Member accounts | Prefer scoped credentials when available | Use official APIs. The current helper supports `X-Auth-Token`. |
+| Official OAuth / app authorization or Open API token | Users who can use Yuque developer auth, often paid or Super Member accounts | Prefer scoped credentials when available | Official and stable route. Use this for conservative Open API behavior, but catalog placement is not confirmed in the public Open API path used here. |
 | Browser session automation | Non-Super Member users who can log in through the browser and accept a visible guided UI flow | Same as browser login | Use an isolated browser profile and UI automation. Do not export cookies by default. It may call Yuque's internal catalog API only after login and dry-run. |
-| Cookie/session background publishing | Non-Super Member users who explicitly accept the risk and want silent writes after login | Maximum account-level permission | Treat as full account credentials. Run create/preflight headless by default, never print values, and require explicit consent each time. It may call Yuque's internal catalog API when the user explicitly chooses this route. |
+| Cookie/session background publishing **(Recommended: full feature set)** | Non-Super Member users who explicitly accept the risk and want silent writes after login | Maximum account-level permission | Most complete current route: headless/background publishing plus catalog insertion. Treat as full account credentials. Run create/preflight headless by default, never print values, and require explicit consent each time. |
 
-If official OAuth docs are available, prefer OAuth/app authorization over raw tokens. If official OAuth is not available, the Open API token mode remains the stable API path.
+If official OAuth docs are available, use OAuth/app authorization when the user prioritizes official least-privilege auth. If the user prioritizes complete publishing behavior, recommend cookie/session after explaining the session-permission risk.
 
 Dedicated browser profiles do not reduce Yuque account permissions. They only reduce local exposure compared with reading the user's main browser profile.
 
@@ -49,7 +49,7 @@ The helper script reads:
 
 ## Local use
 
-Recommended local flow:
+Official-token local flow:
 
 ```bash
 export YUQUE_TOKEN="..."
@@ -78,7 +78,7 @@ Do not implement OAuth unless the user explicitly chooses that product path and 
 Browser-based auth has two variants:
 
 - Browser session automation: open a browser profile, let the user log in, and operate Yuque's UI without exporting raw cookies. Use this when visible browser work is acceptable.
-- Cookie/session extraction: use only when the user explicitly chooses it and understands that the session usually has maximum account permissions. Use this for background/headless publishing after the isolated profile is already logged in. Do not print or export raw session values.
+- Cookie/session extraction: recommended for the most complete current feature set after the user explicitly chooses it and understands that the session usually has maximum account permissions. Use this for background/headless publishing and catalog insertion after the isolated profile is already logged in. Do not print or export raw session values.
 
 ## Helper commands
 
@@ -105,7 +105,7 @@ If the Chrome window opens and immediately closes, the helper is probably runnin
 
 If Yuque verification fails in the new isolated profile, ask the user to try another official login path in the same browser window, such as WeChat or DingTalk app QR-code login. The session remains scoped to the dedicated profile, and the skill should still avoid reading passwords, cookies, or session values unless the user explicitly chooses cookie/session mode.
 
-Choose a mode first:
+Choose a mode first. The selector marks cookie/session as recommended for the full feature set:
 
 ```bash
 python3 scripts/yuque_auth.py select

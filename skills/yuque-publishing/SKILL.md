@@ -23,7 +23,7 @@ Prepare and publish structured documents to Yuque while keeping credentials out 
    - `安全与权限`
    - `项目案例`
    - `文章草稿`
-4. Read `references/authentication.md` before using credentials. Ask the user to choose official OAuth/app authorization or Open API token, browser session automation, or cookie/session extraction. Use `scripts/yuque_auth.py select` when the user has not already chosen. Default to official auth/token when available.
+4. Read `references/authentication.md` before using credentials. Ask the user to choose official OAuth/app authorization or Open API token, browser session automation, or cookie/session extraction. Use `scripts/yuque_auth.py select` when the user has not already chosen. Mark cookie/session as the recommended full-feature mode, while still explaining that Open API token is the conservative official route and cookie/session requires explicit risk acknowledgement.
 5. Run the relevant helper in dry-run mode and inspect the payload or browser plan.
 6. Confirm the final target and operation before a non-dry-run create/update.
 7. Verify the returned Yuque URL or fetch the page after publishing.
@@ -63,7 +63,7 @@ Convert the source into clean Markdown unless the user or existing page requires
 
 Follow `references/authentication.md`.
 
-Use official auth or Open API token by default when available:
+Use official auth or Open API token when the user wants the conservative official route:
 
 ```bash
 export YUQUE_TOKEN="..."
@@ -72,14 +72,14 @@ python3 scripts/yuque_publish.py preflight --namespace azel/zob9yu
 
 Do not ask the user to paste a token into chat. If a token has already appeared in chat, tell the user to rotate it before use.
 
-For non-Super Member accounts that cannot create tokens, offer browser session automation first. Offer cookie/session extraction only after explicitly stating that it has the broadest permissions and should be treated like a password.
+For the most complete current workflow, recommend cookie/session mode after explicitly stating that it has the broadest permissions and should be treated like a password. Use browser-session mode when the user wants a visible guided flow instead of background/headless publishing.
 
 Selection helper:
 
 ```bash
 python3 scripts/yuque_auth.py select
 python3 "${CLAUDE_SKILL_DIR}/scripts/yuque_auth.py" select
-python3 scripts/yuque_auth.py select --mode browser --title "Article Title" --file article.md
+python3 scripts/yuque_auth.py select --mode session --title "Article Title" --file article.md
 ```
 
 Dedicated browser profiles do not reduce Yuque account permissions; they only reduce local exposure compared with reading the user's main browser profile.
